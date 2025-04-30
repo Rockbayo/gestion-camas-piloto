@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Detalles de Siembra</h2>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Siembra #{{ siembra.siembra_id }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Información General</h4>
+                    <p><strong>Bloque:</strong> {{ siembra.bloque_cama.bloque.bloque }}</p>
+                    <p><strong>Cama:</strong> {{ siembra.bloque_cama.cama.cama }}</p>
+                    <p><strong>Lado:</strong> {{ siembra.bloque_cama.lado.lado }}</p>
+                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
+                    <p><strong>Tipo de Flor:</strong> {{ siembra.variedad.flor_color.flor.flor }}</p>
+                    <p><strong>Color:</strong> {{ siembra.variedad.flor_color.color.color }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h4>Datos de Siembra</h4>
+                    <p><strong>Área:</strong> {{ siembra.area.siembra }} ({{ siembra.area.area }} m²)</p>
+                    <p><strong>Densidad:</strong> {{ siembra.densidad.densidad }}</p>
+                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Fecha de Inicio de Corte:</strong> 
+                        {% if siembra.fecha_inicio_corte %}
+                            {{ siembra.fecha_inicio_corte.strftime('%d/%m/%Y') }}
+                        {% else %}
+                            No registrada
+                        {% endif %}
+                    </p>
+                    <p><strong>Estado:</strong> {{ siembra.estado }}</p>
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <h4>Cortes Registrados</h4>
+                    {% if siembra.cortes %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Corte #</th>
+                                <th>Fecha</th>
+                                <th>Cantidad de Tallos</th>
+                                <th>Registrado por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for corte in siembra.cortes %}
+                            <tr>
+                                <td>{{ corte.num_corte }}</td>
+                                <td>{{ corte.fecha_corte.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ corte.cantidad_tallos }}</td>
+                                <td>{{ corte.usuario.nombre_1 }} {{ corte.usuario.apellido_1 }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay cortes registrados para esta siembra.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <h4>Pérdidas Registradas</h4>
+                    {% if siembra.perdidas %}
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Causa</th>
+                                <th>Cantidad</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for perdida in siembra.perdidas %}
+                            <tr>
+                                <td>{{ perdida.fecha_perdida.strftime('%d/%m/%Y') }}</td>
+                                <td>{{ perdida.causa.causa }}</td>
+                                <td>{{ perdida.cantidad }}</td>
+                                <td>{{ perdida.observaciones }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p>No hay pérdidas registradas para esta siembra.</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Volver</a>
+                <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-warning">Editar</a>
+                {% if siembra.fecha_inicio_corte %}
+                <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-success">Registrar Corte</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

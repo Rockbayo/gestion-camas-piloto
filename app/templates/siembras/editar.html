@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Editar Siembra</h2>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Formulario de Edición - Siembra #{{ siembra.siembra_id }}</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.bloque_id.label(class="form-label") }}
+                            {{ form.bloque_id(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.cama_id.label(class="form-label") }}
+                            {{ form.cama_id(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.lado_id.label(class="form-label") }}
+                            {{ form.lado_id(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.variedad_id.label(class="form-label") }}
+                            {{ form.variedad_id(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.area_id.label(class="form-label") }}
+                            {{ form.area_id(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.densidad_id.label(class="form-label") }}
+                            {{ form.densidad_id(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.fecha_siembra.label(class="form-label") }}
+                            {{ form.fecha_siembra(class="form-control", type="date") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Reportes</h2>
+    
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Producción por Variedad</h5>
+                    <p class="card-text">Ver estadísticas de producción por variedad de flor.</p>
+                    <a href="{{ url_for('reportes.produccion_por_variedad') }}" class="btn btn-primary">Ver Reporte</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Producción por Bloque</h5>
+                    <p class="card-text">Ver estadísticas de producción por bloque.</p>
+                    <a href="{{ url_for('reportes.produccion_por_bloque') }}" class="btn btn-primary">Ver Reporte</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Días de Producción</h5>
+                    <p class="card-text">Análisis de días desde siembra hasta corte por variedad.</p>
+                    <a href="{{ url_for('reportes.dias_produccion') }}" class="btn btn-primary">Ver Reporte</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Exportar Datos</h4>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('reportes.exportar_datos', tipo='siembras') }}" class="btn btn-success">
+                            <i class="bi bi-file-excel me-2"></i>Exportar Siembras a Excel
+                        </a>
+                        <a href="{{ url_for('reportes.exportar_datos', tipo='cortes') }}" class="btn btn-success">
+                            <i class="bi bi-file-excel me-2"></i>Exportar Cortes a Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

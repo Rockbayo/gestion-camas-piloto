@@ -1,5 +1,5 @@
 from flask import Blueprint
 
-siembras_bp = Blueprint('siembras', __name__, template_folder='templates')
+siembras = Blueprint('siembras', __name__, url_prefix='/siembras')
 
 from app.siembras import routes

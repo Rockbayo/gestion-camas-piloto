@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Reporte de Producción por Variedad</h2>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            {% if grafico %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4 class="card-title">Gráfico de Producción - Top 10 Variedades</h4>
+                </div>
+                <div class="card-body text-center">
+                    <img src="data:image/png;base64,{{ grafico }}" class="img-fluid" alt="Gráfico de producción">
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Datos de Producción por Variedad</h4>
+                </div>
+                <div class="card-body">
+                    {% if data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Variedad</th>
+                                    <th>Flor</th>
+                                    <th>Color</th>
+                                    <th>Total Tallos</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data %}
+                                <tr>
+                                    <td>{{ item.variedad }}</td>
+                                    <td>{{ item.flor }}</td>
+                                    <td>{{ item.color }}</td>
+                                    <td>{{ item.total_tallos }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">No hay datos disponibles para este reporte.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">Volver a Reportes</a>
+    </div>
+</div>
+{% endblock %}

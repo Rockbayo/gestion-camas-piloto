@@ -1,56 +1,18 @@
-{% extends 'base.html' %}
-
-{% block title %}Inicio - Sistema de Camas Piloto{% endblock %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="row align-items-center min-vh-75">
-    <div class="col-lg-6 text-center text-lg-start">
-        <h1 class="display-4 fw-bold text-primary mb-4">Sistema de Gestión de Camas Piloto</h1>
-        <p class="lead mb-4">Una solución completa para el registro y seguimiento de producción de camas piloto.</p>
-        <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg px-4 me-md-2">
-                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
-            </a>
-        </div>
-    </div>
-    <div class="col-lg-6 d-none d-lg-block">
-        <img src="{{ url_for('static', filename='img/flores.jpg') }}" class="img-fluid rounded shadow" alt="Imagen representativa de flores">
-    </div>
-</div>
-
-<div class="row mt-5">
-    <div class="col-md-4 mb-4">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <div class="mb-3 text-primary">
-                    <i class="fas fa-seedling fa-3x"></i>
-                </div>
-                <h5 class="card-title">Gestión de Siembras</h5>
-                <p class="card-text">Registra y administra todas tus siembras de forma centralizada y organizada.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <div class="mb-3 text-primary">
-                    <i class="fas fa-cut fa-3x"></i>
-                </div>
-                <h5 class="card-title">Control de Cortes</h5>
-                <p class="card-text">Lleva un seguimiento preciso de todos los cortes y su producción.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <div class="mb-3 text-primary">
-                    <i class="fas fa-chart-bar fa-3x"></i>
-                </div>
-                <h5 class="card-title">Reportes y Estadísticas</h5>
-                <p class="card-text">Genera informes detallados y visualiza el rendimiento de tu producción.</p>
-            </div>
-        </div>
+<div class="container">
+    <div class="jumbotron text-center py-5">
+        <h1 class="display-4">Bienvenido al Sistema de Camas Piloto</h1>
+        <p class="lead">Sistema para el registro y seguimiento de producción de camas piloto</p>
+        <hr class="my-4">
+        {% if current_user.is_authenticated %}
+        <p>Utilice el menú superior para navegar por las diferentes secciones del sistema</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Ir al Dashboard</a>
+        {% else %}
+        <p>Por favor, inicie sesión para acceder al sistema</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">Iniciar Sesión</a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

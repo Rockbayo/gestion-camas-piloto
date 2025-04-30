@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Reporte de Días de Producción</h2>
+    
+    <div class="row mt-4">
+        {% if data %}
+            {% for variedad, cortes in data.items() %}
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">{{ variedad }}</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Corte #</th>
+                                                <th>Días Promedio</th>
+                                                <th>Mínimo</th>
+                                                <th>Máximo</th>
+                                                <th>Siembras</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for corte in cortes %}
+                                            <tr>
+                                                <td>{{ corte.num_corte }}</td>
+                                                <td>{{ corte.dias_promedio }}</td>
+                                                <td>{{ corte.dias_minimo }}</td>
+                                                <td>{{ corte.dias_maximo }}</td>
+                                                <td>{{ corte.total_siembras }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                {% if graficos and variedad in graficos %}
+                                <img src="data:image/png;base64,{{ graficos[variedad] }}" class="img-fluid" alt="Gráfico de días de producción">
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+        <div class="col-md-12">
+            <div class="alert alert-info">No hay datos disponibles para este reporte.</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="mt-3">
+        <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">Volver a Reportes</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Nueva Siembra</h2>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Formulario de Registro</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.bloque_id.label(class="form-label") }}
+                            {{ form.bloque_id(class="form-select") }}
+                            {% if form.bloque_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.bloque_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.cama_id.label(class="form-label") }}
+                            {{ form.cama_id(class="form-select") }}
+                            {% if form.cama_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.cama_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.lado_id.label(class="form-label") }}
+                            {{ form.lado_id(class="form-select") }}
+                            {% if form.lado_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.lado_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.variedad_id.label(class="form-label") }}
+                            {{ form.variedad_id(class="form-select") }}
+                            {% if form.variedad_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.variedad_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.area_id.label(class="form-label") }}
+                            {{ form.area_id(class="form-select") }}
+                            {% if form.area_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.area_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.densidad_id.label(class="form-label") }}
+                            {{ form.densidad_id(class="form-select") }}
+                            {% if form.densidad_id.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.densidad_id.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group mb-3">
+                            {{ form.fecha_siembra.label(class="form-label") }}
+                            {{ form.fecha_siembra(class="form-control", type="date") }}
+                            {% if form.fecha_siembra.errors %}
+                                <div class="text-danger">
+                                    {% for error in form.fecha_siembra.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group mt-4">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

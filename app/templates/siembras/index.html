@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Gestión de Siembras</h2>
+    <div class="mb-3">
+        <a href="{{ url_for('siembras.crear') }}" class="btn btn-primary">Nueva Siembra</a>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Listado de Siembras</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Bloque</th>
+                            <th>Cama</th>
+                            <th>Lado</th>
+                            <th>Variedad</th>
+                            <th>Fecha Siembra</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for siembra in siembras.items %}
+                        <tr>
+                            <td>{{ siembra.siembra_id }}</td>
+                            <td>{{ siembra.bloque_cama.bloque.bloque }}</td>
+                            <td>{{ siembra.bloque_cama.cama.cama }}</td>
+                            <td>{{ siembra.bloque_cama.lado.lado }}</td>
+                            <td>{{ siembra.variedad.variedad }}</td>
+                            <td>{{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ siembra.estado }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-sm btn-info">Ver</a>
+                                    <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-sm btn-warning">Editar</a>
+                                    {% if not siembra.fecha_inicio_corte %}
+                                    <a href="{{ url_for('siembras.inicio_corte', id=siembra.siembra_id) }}" class="btn btn-sm btn-success">Inicio Corte</a>
+                                    {% endif %}
+                                    {% if siembra.estado == 'Activa' %}
+                                    <a href="{{ url_for('siembras.finalizar', id=siembra.siembra_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de finalizar esta siembra?')">Finalizar</a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            <nav aria-label="Navegación de páginas">
+                <ul class="pagination justify-content-center">
+                    {% if siembras.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('siembras.index', page=siembras.prev_num) }}" tabindex="-1">Anterior</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Anterior</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in siembras.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if siembras.page == page_num %}
+                            <li class="page-item active">
+                                <a class="page-link" href="{{ url_for('siembras.index', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('siembras.index', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">...</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if siembras.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('siembras.index', page=siembras.next_num) }}">Siguiente</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#">Siguiente</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}
