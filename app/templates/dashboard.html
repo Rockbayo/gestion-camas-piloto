@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Camas Piloto{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Estadísticas principales -->
+<div class="row">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Siembras Activas</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.siembras_activas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-seedling fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total Siembras</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_siembras }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-database fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Total Cortes</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_cortes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-cut fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Total Variedades</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ stats.total_variedades }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-leaf fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficas -->
+<div class="row">
+    <!-- Gráfica de producción por variedad -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Producción por Variedad (Top 5)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="variedadesChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfica de producción reciente -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Producción Últimos 7 Días</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height:300px;">
+                    <canvas id="produccionRecienteChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas actividades -->
+<div class="row">
+    <!-- Últimas siembras -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Últimas Siembras</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Variedad</th>
+                                <th>Ubicación</th>
+                                <th>Fecha</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for siembra in ultimas_siembras %}
+                            <tr>
+                                <td>{{ siembra.siembra_id }}</td>
+                                <td>{{ siembra.variedad.variedad }}</td>
+                                <td>{{ siembra.bloque_cama_lado }}</td>
+                                <td>{{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</td>
+                                <td>
+                                    <a href="{{ url_for('siembras.ver_siembra', id=siembra.siembra_id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay siembras registradas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-right mt-2">
+                    <a href="{{ url_for('siembras.index') }}" class="btn btn-sm btn-primary">Ver todas</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimos cortes -->
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Últimos Cortes</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Siembra</th>
+                                <th>Corte</th>
+                                <th>Cantidad</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for corte in ultimos_cortes %}
+                            <tr>
+                                <td>{{ corte.corte_id }}</td>
+                                <td>{{ corte.siembra_id }}</td>
+                                <td>{{ corte.num_corte }}</td>
+                                <td>{{ corte.cantidad_tallos }}</td>
+                                <td>{{ corte.fecha_corte.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No hay cortes registrados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-right mt-2">
+                    <a href="{{ url_for('cortes.index') }}" class="btn btn-sm btn-primary">Ver todos</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de producción por variedad
+    var ctxVariedades = document.getElementById('variedadesChart').getContext('2d');
+    var variedadesChart = new Chart(ctxVariedades, {
+        type: 'bar',
+        data: {
+            labels: {{ labels_variedades|tojson }},
+            datasets: [{
+                label: 'Tallos por Variedad',
+                data: {{ datos_variedades|tojson }},
+                backgroundColor: [
+                    'rgba(78, 115, 223, 0.8)',
+                    'rgba(54, 185, 204, 0.8)',
+                    'rgba(28, 200, 138, 0.8)',
+                    'rgba(246, 194, 62, 0.8)',
+                    'rgba(231, 74, 59, 0.8)'
+                ],
+                borderColor: [
+                    'rgb(78, 115, 223)',
+                    'rgb(54, 185, 204)',
+                    'rgb(28, 200, 138)',
+                    'rgb(246, 194, 62)',
+                    'rgb(231, 74, 59)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    
+    // Gráfica de producción reciente
+    var ctxProduccion = document.getElementById('produccionRecienteChart').getContext('2d');
+    var produccionChart = new Chart(ctxProduccion, {
+        type: 'line',
+        data: {
+            labels: {{ labels_dias|tojson }},
+            datasets: [{
+                label: 'Producción Diaria',
+                data: {{ datos_dias|tojson }},
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

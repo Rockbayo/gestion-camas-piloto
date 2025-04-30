@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes y Estadísticas - Sistema de Camas Piloto{% endblock %}
+
+{% block page_title %}Reportes y Estadísticas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Producción por Variedad</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Visualiza la cantidad total de tallos producidos por cada variedad de flor.</p>
+                <div class="text-center">
+                    <i class="fas fa-chart-bar fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('reportes.produccion') }}" class="btn btn-primary">
+                        Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Producción Mensual</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Analiza la tendencia de producción mensual durante el último año.</p>
+                <div class="text-center">
+                    <i class="fas fa-calendar-alt fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('reportes.produccion_mensual') }}" class="btn btn-primary">
+                        Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Productividad por Bloque</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Compara la productividad (tallos/m²) entre los diferentes bloques.</p>
+                <div class="text-center">
+                    <i class="fas fa-chart-line fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('reportes.productividad') }}" class="btn btn-primary">
+                        Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Distribución de Variedades</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Visualiza la distribución de variedades por tipo de flor y color.</p>
+                <div class="text-center">
+                    <i class="fas fa-th fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('reportes.variedades_flor_color') }}" class="btn btn-primary">
+                        Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Ciclo de Vida de Siembras</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Analiza estadísticas sobre el ciclo de vida de siembras finalizadas.</p>
+                <div class="text-center">
+                    <i class="fas fa-seedling fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ url_for('reportes.ciclo_vida') }}" class="btn btn-primary">
+                        Ver Reporte
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Exportar Datos</h6>
+            </div>
+            <div class="card-body">
+                <p class="card-text">Exporta los datos de los diferentes reportes en formato CSV.</p>
+                <div class="text-center">
+                    <i class="fas fa-file-csv fa-4x text-primary mb-3"></i>
+                </div>
+                <div class="d-grid">
+                    <div class="dropdown">
+                        <button class="btn btn-primary dropdown-toggle w-100" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            Seleccionar Reporte
+                        </button>
+                        <ul class="dropdown-menu w-100" aria-labelledby="exportDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('reportes.exportar_reporte', tipo='produccion') }}">Producción por Variedad</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reportes.exportar_reporte', tipo='produccion_mensual') }}">Producción Mensual</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('reportes.exportar_reporte', tipo='ciclo_vida') }}">Ciclo de Vida</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Siembras - Sistema de Camas Piloto{% endblock %}
+
+{% block page_title %}Gestión de Siembras{% endblock %}
+
+{% block page_actions %}
+<a href="{{ url_for('siembras.nueva_siembra') }}" class="btn btn-primary">
+    <i class="fas fa-plus me-1"></i>Nueva Siembra
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{{ url_for('siembras.index') }}" class="row g-3">
+            <div class="col-md-4">
+                {{ form.estado.label(class="form-label") }}
+                {{ form.estado(class="form-select") }}
+            </div>
+            <div class="col-md-4">
+                {{ form.bloque_id.label(class="form-label") }}
+                {{ form.bloque_id(class="form-select") }}
+            </div>
+            <div class="col-md-4">
+                {{ form.variedad_id.label(class="form-label") }}
+                {{ form.variedad_id(class="form-select") }}
+            </div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i>Filtrar
+                </button>
+                <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt me-1"></i>Limpiar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabla de Siembras -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Siembras Registradas</h6>
+        <span class="badge bg-primary">Total: {{ siembras.total }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped">
+                <thead class="table-primary">
+                    <tr>
+                        <th>ID</th>
+                        <th>Bloque</th>
+                        <th>Cama-Lado</th>
+                        <th>Variedad</th>
+                        <th>Fecha Siembra</th>
+                        <th>Estado</th>
+                        <th>Días Ciclo</th>
+                        <th>Cortes</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for siembra in siembras.items %}
+                    <tr>
+                        <td>{{ siembra.siembra_id }}</td>
+                        <td>{{ siembra.bloque_cama_lado.bloque.bloque }}</td>
+                        <td>{{ siembra.bloque_cama_lado.cama.cama }}-{{ siembra.bloque_cama_lado.lado.lado }}</td>
+                        <td>{{ siembra.variedad.variedad }}</td>
+                        <td>{{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if siembra.estado == 'Activa' %}
+                            <span class="badge bg-success">Activa</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Finalizada</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ siembra.dias_ciclo }}</td>
+                        <td>{{ siembra.total_cortes }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('siembras.ver_siembra', id=siembra.siembra_id) }}" class="btn btn-sm btn-info" title="Ver Detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if siembra.estado == 'Activa' %}
+                                <a href="{{ url_for('siembras.editar_siembra', id=siembra.siembra_id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ url_for('siembras.finalizar_siembra', id=siembra.siembra_id) }}" class="btn btn-sm btn-danger" title="Finalizar">
+                                    <i class="fas fa-flag-checkered"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center">No hay siembras registradas que coincidan con los filtros.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if siembras.pages > 1 %}
+        <nav aria-label="Paginación de siembras">
+            <ul class="pagination justify-content-center">
+                {% if siembras.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('siembras.index', page=siembras.prev_num, estado=request.args.get('estado', ''), bloque_id=request.args.get('bloque_id', ''), variedad_id=request.args.get('variedad_id', '')) }}" aria-label="Anterior">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+                {% endif %}
+                
+                {% for page_num in siembras.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num == siembras.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('siembras.index', page=page_num, estado=request.args.get('estado', ''), bloque_id=request.args.get('bloque_id', ''), variedad_id=request.args.get('variedad_id', '')) }}">{{ page_num }}</a>
+                        </li>
+                        {% endif %}
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if siembras.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('siembras.index', page=siembras.next_num, estado=request.args.get('estado', ''), bloque_id=request.args.get('bloque_id', ''), variedad_id=request.args.get('variedad_id', '')) }}" aria-label="Siguiente">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
