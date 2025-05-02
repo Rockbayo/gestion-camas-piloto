@@ -1,5 +1,6 @@
+# Inicializa el módulo de autenticación de Flask
 from flask import Blueprint
 
-auth = Blueprint('auth', __name__, url_prefix='/auth')
+bp = Blueprint('auth', __name__)
 
 from app.auth import routes

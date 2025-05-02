@@ -1,12 +1,13 @@
+# Rutas para la gestión de cortes
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app import db
-from app.cortes import cortes
+from app.cortes import bp
 from app.cortes.forms import CorteForm
 from app.models import Corte, Siembra
 from datetime import datetime
 
-@cortes.route('/')
+@bp.route('/')
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
@@ -14,7 +15,7 @@ def index():
         page=page, per_page=10)
     return render_template('cortes/index.html', title='Cortes', cortes=cortes_list)
 
-@cortes.route('/crear/<int:siembra_id>', methods=['GET', 'POST'])
+@bp.route('/crear/<int:siembra_id>', methods=['GET', 'POST'])
 @login_required
 def crear(siembra_id):
     siembra = Siembra.query.get_or_404(siembra_id)
@@ -63,7 +64,7 @@ def crear(siembra_id):
     
     return render_template('cortes/crear.html', title='Registrar Corte', form=form, siembra=siembra)
 
-@cortes.route('/editar/<int:id>', methods=['GET', 'POST'])
+@bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     corte = Corte.query.get_or_404(id)
@@ -104,7 +105,7 @@ def editar(id):
     
     return render_template('cortes/editar.html', title='Editar Corte', form=form, corte=corte, siembra=siembra)
 
-@cortes.route('/eliminar/<int:id>')
+@bp.route('/eliminar/<int:id>')
 @login_required
 def eliminar(id):
     corte = Corte.query.get_or_404(id)

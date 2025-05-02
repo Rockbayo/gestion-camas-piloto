@@ -1,3 +1,4 @@
+# Archivo .gitignore para un proyecto de Python y Flask
 # Python
 __pycache__/
 *.py[cod]
@@ -42,3 +43,7 @@ ENV/
 # SQLite
 *.db
 *.sqlite
+
+# Logs
+logs/
+*.log

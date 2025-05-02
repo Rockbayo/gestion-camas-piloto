@@ -1,36 +1,103 @@
-/* General styles */
+/* Estilos personalizados para la aplicación */
+
+/* Ajustes generales */
 body {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 main {
-    flex: 1;
+    flex: 1 0 auto;
 }
 
-/* Card styles */
+/* Estilos del header y navegación */
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+/* Tarjetas y paneles */
 .card {
-    margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
 .card-header {
+    border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
+}
+
+/* Botones y enlaces */
+.btn {
+    border-radius: 0.3rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+/* Formularios */
+.form-control, .form-select {
+    border-radius: 0.3rem;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+/* Tablas */
+.table th {
     background-color: #f8f9fa;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
 }
 
-/* Table styles */
-.table-responsive {
-    overflow-x: auto;
+/* Paginación */
+.pagination {
+    margin-top: 1rem;
 }
 
-/* Buttons */
-.btn-group .btn {
-    margin-right: 5px;
+/* Badges */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
 }
 
-/* Dashboard cards */
-.card .display-4 {
+/* Footer */
+.footer {
+    padding: 1rem 0;
+    margin-top: auto;
+}
+
+/* Estilos para dashboard */
+.display-4 {
     font-size: 2.5rem;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 767.98px) {
+    .card-title {
+        font-size: 1.2rem;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
 }

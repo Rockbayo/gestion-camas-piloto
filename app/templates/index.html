@@ -1,18 +1,51 @@
+# Plantilla de inicio del sistema de gestión de camas
 {% extends "base.html" %}
 
 {% block content %}
 <div class="container">
-    <div class="jumbotron text-center py-5">
-        <h1 class="display-4">Bienvenido al Sistema de Camas Piloto</h1>
-        <p class="lead">Sistema para el registro y seguimiento de producción de camas piloto</p>
+    <div class="jumbotron text-center bg-light py-5 rounded-3 shadow-sm">
+        <h1 class="display-4">Bienvenido al Sistema de Gestión de Camas</h1>
+        <p class="lead">Sistema integrado para administrar siembras, cortes y pérdidas en el cultivo.</p>
         <hr class="my-4">
-        {% if current_user.is_authenticated %}
-        <p>Utilice el menú superior para navegar por las diferentes secciones del sistema</p>
-        <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Ir al Dashboard</a>
-        {% else %}
-        <p>Por favor, inicie sesión para acceder al sistema</p>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg">Iniciar Sesión</a>
-        {% endif %}
+        <div class="d-flex justify-content-center gap-3">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('main.dashboard') }}" role="button">
+                <i class="fas fa-chart-line"></i> Dashboard
+            </a>
+            <a class="btn btn-success btn-lg" href="{{ url_for('siembras.crear') }}" role="button">
+                <i class="fas fa-plus-circle"></i> Nueva Siembra
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-leaf text-success"></i> Siembras</h5>
+                    <p class="card-text">Administra el registro de tus siembras, su ubicación, variedad y seguimiento completo.</p>
+                    <a href="{{ url_for('siembras.index') }}" class="btn btn-outline-primary">Ver Siembras</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-cut text-warning"></i> Cortes</h5>
+                    <p class="card-text">Registra los cortes realizados a cada siembra, con fechas y cantidades precisas.</p>
+                    <a href="{{ url_for('cortes.index') }}" class="btn btn-outline-primary">Ver Cortes</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-exclamation-triangle text-danger"></i> Pérdidas</h5>
+                    <p class="card-text">Lleva un registro de las pérdidas por diversas causas para mejorar la producción.</p>
+                    <a href="{{ url_for('perdidas.index') }}" class="btn btn-outline-primary">Ver Pérdidas</a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
+```

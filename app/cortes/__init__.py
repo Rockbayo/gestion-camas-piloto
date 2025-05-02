@@ -1,5 +1,5 @@
 from flask import Blueprint
 
-cortes = Blueprint('cortes', __name__, url_prefix='/cortes')
+bp = Blueprint('cortes', __name__)
 
 from app.cortes import routes

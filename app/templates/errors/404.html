@@ -1,0 +1,29 @@
+# Eror 404 Page Template
+
+{% set title = "Página no encontrada" %}
+{% set description = "Lo sentimos, la página que estás buscando no existe o ha sido movida." %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body py-5">
+                    <h1 class="display-1 text-danger">404</h1>
+                    <h2 class="mb-4">Página no encontrada</h2>
+                    <p class="lead mb-4">Lo sentimos, la página que estás buscando no existe o ha sido movida.</p>
+                    <div>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

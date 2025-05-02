@@ -1,11 +1,13 @@
+# Rutas para la gestión de siembras
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
 from app import db
-from app.siembras import siembras
+from app.siembras import bp
 from app.siembras.forms import SiembraForm, InicioCorteForm
 from app.models import Siembra, BloqueCamaLado, Bloque, Cama, Lado
+from datetime import datetime
 
-@siembras.route('/')
+@bp.route('/')
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
@@ -13,7 +15,7 @@ def index():
         page=page, per_page=10)
     return render_template('siembras/index.html', title='Siembras', siembras=siembras_list)
 
-@siembras.route('/crear', methods=['GET', 'POST'])
+@bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 def crear():
     form = SiembraForm()
@@ -43,15 +45,21 @@ def crear():
             usuario_id=current_user.usuario_id)
         db.session.add(siembra)
         db.session.commit()
-        flash('La siembra ha sido registrada exitosamente!')
+        flash('La siembra ha sido registrada exitosamente!', 'success')
         return redirect(url_for('siembras.index'))
     
     return render_template('siembras/crear.html', title='Nueva Siembra', form=form)
 
-@siembras.route('/editar/<int:id>', methods=['GET', 'POST'])
+@bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
     siembra = Siembra.query.get_or_404(id)
+    
+    # Verificar que la siembra esté activa
+    if siembra.estado != 'Activa':
+        flash('No se pueden editar siembras finalizadas', 'warning')
+        return redirect(url_for('siembras.index'))
+    
     form = SiembraForm()
     
     if form.validate_on_submit():
@@ -78,7 +86,7 @@ def editar(id):
         siembra.fecha_siembra = form.fecha_siembra.data
         
         db.session.commit()
-        flash('La siembra ha sido actualizada exitosamente!')
+        flash('La siembra ha sido actualizada exitosamente!', 'success')
         return redirect(url_for('siembras.index'))
     
     # Prellenar el formulario con los datos existentes
@@ -94,30 +102,52 @@ def editar(id):
     
     return render_template('siembras/editar.html', title='Editar Siembra', form=form, siembra=siembra)
 
-@siembras.route('/inicio-corte/<int:id>', methods=['GET', 'POST'])
+@bp.route('/inicio-corte/<int:id>', methods=['GET', 'POST'])
 @login_required
 def inicio_corte(id):
     siembra = Siembra.query.get_or_404(id)
+    
+    # Verificar que la siembra esté activa
+    if siembra.estado != 'Activa':
+        flash('No se puede registrar inicio de corte en una siembra finalizada', 'warning')
+        return redirect(url_for('siembras.index'))
+    
+    # Verificar que no tenga ya una fecha de inicio de corte
+    if siembra.fecha_inicio_corte:
+        flash('Esta siembra ya tiene una fecha de inicio de corte registrada', 'warning')
+        return redirect(url_for('siembras.detalles', id=id))
+    
     form = InicioCorteForm()
     
     if form.validate_on_submit():
+        # Verificar que la fecha de inicio de corte no sea anterior a la fecha de siembra
+        if form.fecha_inicio_corte.data < siembra.fecha_siembra:
+            flash('La fecha de inicio de corte no puede ser anterior a la fecha de siembra', 'danger')
+            return redirect(url_for('siembras.inicio_corte', id=id))
+        
         siembra.fecha_inicio_corte = form.fecha_inicio_corte.data
         db.session.commit()
-        flash('Fecha de inicio de corte registrada con éxito!')
-        return redirect(url_for('siembras.index'))
+        flash('Fecha de inicio de corte registrada con éxito!', 'success')
+        return redirect(url_for('siembras.detalles', id=id))
     
     return render_template('siembras/inicio_corte.html', title='Registrar Inicio de Corte', form=form, siembra=siembra)
 
-@siembras.route('/finalizar/<int:id>')
+@bp.route('/finalizar/<int:id>')
 @login_required
 def finalizar(id):
     siembra = Siembra.query.get_or_404(id)
+    
+    # Verificar que la siembra esté activa
+    if siembra.estado != 'Activa':
+        flash('Esta siembra ya ha sido finalizada', 'warning')
+        return redirect(url_for('siembras.index'))
+    
     siembra.estado = 'Finalizada'
     db.session.commit()
-    flash('La siembra ha sido finalizada con éxito!')
+    flash('La siembra ha sido finalizada con éxito!', 'success')
     return redirect(url_for('siembras.index'))
 
-@siembras.route('/detalles/<int:id>')
+@bp.route('/detalles/<int:id>')
 @login_required
 def detalles(id):
     siembra = Siembra.query.get_or_404(id)

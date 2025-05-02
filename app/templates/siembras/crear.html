@@ -1,118 +1,105 @@
+# Plantilla para crear una nueva siembra
+
+{% set title = "Crear Nueva Siembra" %}
+{% set description = "Formulario para registrar una nueva siembra en el sistema." %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
 <div class="container">
-    <h2>Nueva Siembra</h2>
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Formulario de Registro</h3>
+    <h1 class="mb-4">Nueva Siembra</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Formulario de Registro</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="">
                 {{ form.hidden_tag() }}
-                <div class="row">
+                
+                <div class="row mb-3">
                     <div class="col-md-4">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             {{ form.bloque_id.label(class="form-label") }}
                             {{ form.bloque_id(class="form-select") }}
-                            {% if form.bloque_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.bloque_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.bloque_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             {{ form.cama_id.label(class="form-label") }}
                             {{ form.cama_id(class="form-select") }}
-                            {% if form.cama_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.cama_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.cama_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-4">
-                        <div class="form-group mb-3">
+                        <div class="form-group">
                             {{ form.lado_id.label(class="form-label") }}
                             {{ form.lado_id(class="form-select") }}
-                            {% if form.lado_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.lado_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.lado_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
                 
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
                             {{ form.variedad_id.label(class="form-label") }}
                             {{ form.variedad_id(class="form-select") }}
-                            {% if form.variedad_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.variedad_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.variedad_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            {{ form.area_id.label(class="form-label") }}
-                            {{ form.area_id(class="form-select") }}
-                            {% if form.area_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.area_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
-                            {{ form.densidad_id.label(class="form-label") }}
-                            {{ form.densidad_id(class="form-select") }}
-                            {% if form.densidad_id.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.densidad_id.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
                             {{ form.fecha_siembra.label(class="form-label") }}
                             {{ form.fecha_siembra(class="form-control", type="date") }}
-                            {% if form.fecha_siembra.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.fecha_siembra.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.fecha_siembra.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
                 
-                <div class="form-group mt-4">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.area_id.label(class="form-label") }}
+                            {{ form.area_id(class="form-select") }}
+                            {% for error in form.area_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.densidad_id.label(class="form-label") }}
+                            {{ form.densidad_id(class="form-select") }}
+                            {% for error in form.densidad_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary me-md-2">Cancelar</a>
                     {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Cancelar</a>
                 </div>
             </form>
         </div>

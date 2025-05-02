@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body py-5">
+                    <h1 class="display-1 text-danger">500</h1>
+                    <h2 class="mb-4">Error Interno del Servidor</h2>
+                    <p class="lead mb-4">Lo sentimos, ha ocurrido un error inesperado. El administrador ha sido notificado y estamos trabajando para solucionarlo.</p>
+                    <div>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Volver al Inicio
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

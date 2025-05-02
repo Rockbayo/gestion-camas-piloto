@@ -1,5 +1,6 @@
+# Inicializar el módulo de siembras
 from flask import Blueprint
 
-siembras = Blueprint('siembras', __name__, url_prefix='/siembras')
+bp = Blueprint('siembras', __name__)
 
 from app.siembras import routes

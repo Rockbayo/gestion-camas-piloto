@@ -1,0 +1,66 @@
+<!-- app/templates/admin/variedades.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Gestión de Variedades</h1>
+    
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        <a href="{{ url_for('admin.importar_variedades') }}" class="btn btn-success">
+            <i class="fas fa-file-import"></i> Importar Variedades
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Listado de Variedades</h5>
+        </div>
+        <div class="card-body">
+            {% if variedades %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="tablaVariedades">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Variedad</th>
+                            <th>Flor</th>
+                            <th>Color</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for variedad in variedades %}
+                        <tr>
+                            <td>{{ variedad.variedad_id }}</td>
+                            <td>{{ variedad.variedad }}</td>
+                            <td>{{ variedad.flor_color.flor.flor }}</td>
+                            <td>{{ variedad.flor_color.color.color }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay variedades registradas.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#tablaVariedades').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+            },
+            order: [[0, 'asc']]
+        });
+    });
+</script>
+{% endblock %}

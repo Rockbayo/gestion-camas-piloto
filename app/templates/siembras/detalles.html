@@ -1,106 +1,192 @@
+# Plantilla para mostrar los detalles de una siembra
+
+{% set title = "Detalles de Siembra" %}
+{% set description = "Detalles de la siembra seleccionada, incluyendo información sobre cortes y pérdidas." %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h2>Detalles de Siembra</h2>
+<div class="container mt-4">
+    <h1>Detalles de Siembra</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
     <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Siembra #{{ siembra.siembra_id }}</h3>
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Información de Siembra</h5>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h4>Información General</h4>
-                    <p><strong>Bloque:</strong> {{ siembra.bloque_cama.bloque.bloque }}</p>
-                    <p><strong>Cama:</strong> {{ siembra.bloque_cama.cama.cama }}</p>
-                    <p><strong>Lado:</strong> {{ siembra.bloque_cama.lado.lado }}</p>
-                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
-                    <p><strong>Tipo de Flor:</strong> {{ siembra.variedad.flor_color.flor.flor }}</p>
-                    <p><strong>Color:</strong> {{ siembra.variedad.flor_color.color.color }}</p>
+                    <p><strong>ID:</strong> {{ siembra.siembra_id }}</p>
+                    <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
+                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }} ({{ siembra.variedad.flor_color.descripcion_completa }})</p>
+                    <p><strong>Área:</strong> {{ siembra.area.siembra }} ({{ siembra.area.area }} m²)</p>
                 </div>
                 <div class="col-md-6">
-                    <h4>Datos de Siembra</h4>
-                    <p><strong>Área:</strong> {{ siembra.area.siembra }} ({{ siembra.area.area }} m²)</p>
-                    <p><strong>Densidad:</strong> {{ siembra.densidad.densidad }}</p>
-                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</p>
+                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d-%m-%Y') }}</p>
                     <p><strong>Fecha de Inicio de Corte:</strong> 
                         {% if siembra.fecha_inicio_corte %}
-                            {{ siembra.fecha_inicio_corte.strftime('%d/%m/%Y') }}
+                            {{ siembra.fecha_inicio_corte.strftime('%d-%m-%Y') }}
                         {% else %}
-                            No registrada
+                            <span class="text-warning">No registrada</span>
                         {% endif %}
                     </p>
-                    <p><strong>Estado:</strong> {{ siembra.estado }}</p>
+                    <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
+                    <p><strong>Densidad:</strong> {{ siembra.densidad.densidad }}</p>
                 </div>
             </div>
             
-            <div class="row mt-4">
+            <div class="row mt-3">
                 <div class="col-md-12">
-                    <h4>Cortes Registrados</h4>
-                    {% if siembra.cortes %}
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Corte #</th>
-                                <th>Fecha</th>
-                                <th>Cantidad de Tallos</th>
-                                <th>Registrado por</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for corte in siembra.cortes %}
-                            <tr>
-                                <td>{{ corte.num_corte }}</td>
-                                <td>{{ corte.fecha_corte.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ corte.cantidad_tallos }}</td>
-                                <td>{{ corte.usuario.nombre_1 }} {{ corte.usuario.apellido_1 }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p>No hay cortes registrados para esta siembra.</p>
-                    {% endif %}
+                    <div class="d-flex">
+                        {% if siembra.estado == 'Activa' %}
+                            {% if not siembra.fecha_inicio_corte %}
+                            <a href="{{ url_for('siembras.inicio_corte', id=siembra.siembra_id) }}" class="btn btn-primary me-2">
+                                <i class="fas fa-scissors"></i> Registrar Inicio de Corte
+                            </a>
+                            {% endif %}
+                            <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-warning me-2">
+                                <i class="fas fa-edit"></i> Editar Siembra
+                            </a>
+                            <a href="{{ url_for('siembras.finalizar', id=siembra.siembra_id) }}" class="btn btn-danger me-2" onclick="return confirm('¿Está seguro de finalizar esta siembra?')">
+                                <i class="fas fa-check-circle"></i> Finalizar Siembra
+                            </a>
+                            {% if siembra.fecha_inicio_corte %}
+                            <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-success me-2">
+                                <i class="fas fa-leaf"></i> Registrar Corte
+                            </a>
+                            {% endif %}
+                            <!-- Botón para registrar pérdidas -->
+                            <a href="{{ url_for('perdidas.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-warning me-2">
+                                <i class="fas fa-exclamation-triangle"></i> Registrar Pérdida
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            
-            <div class="row mt-4">
-                <div class="col-md-12">
-                    <h4>Pérdidas Registradas</h4>
-                    {% if siembra.perdidas %}
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Causa</th>
-                                <th>Cantidad</th>
-                                <th>Observaciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for perdida in siembra.perdidas %}
-                            <tr>
-                                <td>{{ perdida.fecha_perdida.strftime('%d/%m/%Y') }}</td>
-                                <td>{{ perdida.causa.causa }}</td>
-                                <td>{{ perdida.cantidad }}</td>
-                                <td>{{ perdida.observaciones }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p>No hay pérdidas registradas para esta siembra.</p>
-                    {% endif %}
-                </div>
+        </div>
+    </div>
+    
+    <!-- Sección de Cortes -->
+    <div class="card mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Cortes Registrados</h5>
+        </div>
+        <div class="card-body">
+            {% if siembra.cortes %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha</th>
+                            <th>Cantidad</th>
+                            <th>Registrado por</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for corte in siembra.cortes|sort(attribute='num_corte') %}
+                        <tr>
+                            <td>{{ corte.num_corte }}</td>
+                            <td>{{ corte.fecha_corte.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ corte.cantidad_tallos }}</td>
+                            <td>{{ corte.usuario.full_name }}</td>
+                            <td>
+                                {% if siembra.estado == 'Activa' %}
+                                <div class="btn-group">
+                                    <a href="{{ url_for('cortes.editar', id=corte.corte_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('cortes.eliminar', id=corte.corte_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este corte?')" data-bs-toggle="tooltip" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-primary">
+                            <td colspan="2"><strong>Total:</strong></td>
+                            <td><strong>{{ siembra.total_tallos }}</strong></td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
             </div>
-            
-            <div class="mt-4">
-                <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Volver</a>
-                <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-warning">Editar</a>
-                {% if siembra.fecha_inicio_corte %}
-                <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-success">Registrar Corte</a>
-                {% endif %}
+            {% else %}
+            <div class="alert alert-info">
+                No hay cortes registrados para esta siembra.
             </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sección de Pérdidas -->
+    <div class="card mt-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Pérdidas Registradas</h5>
+        </div>
+        <div class="card-body">
+            {% if siembra.perdidas %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Causa</th>
+                            <th>Cantidad</th>
+                            <th>Observaciones</th>
+                            <th>Registrado por</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perdida in siembra.perdidas|sort(attribute='fecha_perdida', reverse=True) %}
+                        <tr>
+                            <td>{{ perdida.fecha_perdida.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ perdida.causa.causa }}</td>
+                            <td>{{ perdida.cantidad }}</td>
+                            <td>{{ perdida.observaciones or '-' }}</td>
+                            <td>{{ perdida.usuario.full_name }}</td>
+                            <td>
+                                {% if siembra.estado == 'Activa' %}
+                                <div class="btn-group">
+                                    <a href="{{ url_for('perdidas.editar', id=perdida.perdida_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('perdidas.eliminar', id=perdida.perdida_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-danger">
+                            <td colspan="2"><strong>Total:</strong></td>
+                            <td><strong>{{ siembra.total_perdidas }}</strong></td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                No hay pérdidas registradas para esta siembra.
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

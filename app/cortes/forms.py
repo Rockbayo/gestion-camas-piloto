@@ -1,3 +1,4 @@
+# Formulario para registrar cortes de siembra
 from flask_wtf import FlaskForm
 from wtforms import StringField, IntegerField, DateField, SubmitField, HiddenField
 from wtforms.validators import DataRequired, NumberRange

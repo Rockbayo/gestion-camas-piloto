@@ -1,7 +1,10 @@
+# Conexión a la base de datos y definición de modelos para la aplicación Flask
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db, login_manager
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import text
 
 @login_manager.user_loader
 def load_user(id):
@@ -15,6 +18,33 @@ class Documento(db.Model):
     def __repr__(self):
         return f'<Documento {self.documento}>'
 
+class Rol(db.Model):
+    __tablename__ = 'roles'
+    rol_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre = db.Column(db.String(50), unique=True, nullable=False)
+    descripcion = db.Column(db.String(200))
+    
+    # Relación con permisos (muchos a muchos)
+    permisos = db.relationship('Permiso', secondary='roles_permisos', backref='roles')
+    
+    def __repr__(self):
+        return f'<Rol {self.nombre}>'
+
+class Permiso(db.Model):
+    __tablename__ = 'permisos'
+    permiso_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    codigo = db.Column(db.String(50), unique=True, nullable=False)
+    descripcion = db.Column(db.String(200))
+    
+    def __repr__(self):
+        return f'<Permiso {self.codigo}>'
+
+# Tabla de relación entre roles y permisos
+roles_permisos = db.Table('roles_permisos',
+    db.Column('rol_id', db.Integer, db.ForeignKey('roles.rol_id'), primary_key=True),
+    db.Column('permiso_id', db.Integer, db.ForeignKey('permisos.permiso_id'), primary_key=True)
+)
+
 class Usuario(UserMixin, db.Model):
     __tablename__ = 'usuarios'
     usuario_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -22,15 +52,18 @@ class Usuario(UserMixin, db.Model):
     nombre_2 = db.Column(db.String(20))
     apellido_1 = db.Column(db.String(20), nullable=False)
     apellido_2 = db.Column(db.String(20))
-    cargo = db.Column(db.String(20), nullable=False)
+    cargo = db.Column(db.String(30), nullable=False)  # Longitud aumentada a 30 para coincidir con BD
     num_doc = db.Column(db.Integer, nullable=False)
     documento_id = db.Column(db.Integer, db.ForeignKey('documentos.doc_id'), nullable=False)
-    # Campos adicionales para autenticación
+    # Campos para autenticación
     username = db.Column(db.String(20), unique=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(255))  # Cambiado a VARCHAR(255) según direct_db_update.py
+    # Campo para rol
+    rol_id = db.Column(db.Integer, db.ForeignKey('roles.rol_id'))
     
-    # Relación con documento
+    # Relaciones
     documento = db.relationship('Documento', backref='usuarios')
+    rol = db.relationship('Rol', backref='usuarios')
     
     def get_id(self):
         return str(self.usuario_id)
@@ -41,12 +74,43 @@ class Usuario(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
     
+    @hybrid_property
+    def full_name(self):
+        """Devuelve el nombre completo del usuario."""
+        if self.nombre_2 and self.apellido_2:
+            return f"{self.nombre_1} {self.nombre_2} {self.apellido_1} {self.apellido_2}"
+        elif self.nombre_2:
+            return f"{self.nombre_1} {self.nombre_2} {self.apellido_1}"
+        elif self.apellido_2:
+            return f"{self.nombre_1} {self.apellido_1} {self.apellido_2}"
+        else:
+            return f"{self.nombre_1} {self.apellido_1}"
+    
+    def has_permission(self, permission_code):
+        """Verifica si el usuario tiene un permiso específico a través de su rol"""
+        if not self.rol:
+            return False
+        
+        for permiso in self.rol.permisos:
+            if permiso.codigo == permission_code:
+                return True
+        
+        return False
+    
+    def has_role(self, role_name):
+        """Verifica si el usuario tiene un rol específico"""
+        if not self.rol:
+            return False
+        
+        return self.rol.nombre == role_name
+    
     def __repr__(self):
         return f'<Usuario {self.nombre_1} {self.apellido_1}>'
 
 class Bloque(db.Model):
     __tablename__ = 'bloques'
-    bloque_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    # Corregido para utilizar TINYINT como en la base de datos
+    bloque_id = db.Column(db.SmallInteger, primary_key=True, autoincrement=True)
     bloque = db.Column(db.String(20), nullable=False, unique=True)
     
     def __repr__(self):
@@ -71,7 +135,8 @@ class Lado(db.Model):
 class BloqueCamaLado(db.Model):
     __tablename__ = 'bloques_camas_lado'
     bloque_cama_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    bloque_id = db.Column(db.Integer, db.ForeignKey('bloques.bloque_id'))
+    # Corregido para utilizar TINYINT como en la base de datos
+    bloque_id = db.Column(db.SmallInteger, db.ForeignKey('bloques.bloque_id'))
     cama_id = db.Column(db.Integer, db.ForeignKey('camas.cama_id'))
     lado_id = db.Column(db.Integer, db.ForeignKey('lados.lado_id'))
     
@@ -81,6 +146,11 @@ class BloqueCamaLado(db.Model):
     lado = db.relationship('Lado', backref='bloques_camas_lado')
     
     __table_args__ = (db.UniqueConstraint('bloque_id', 'cama_id', 'lado_id'),)
+    
+    # Propiedad híbrida para obtener ubicación completa
+    @hybrid_property
+    def ubicacion_completa(self):
+        return f"{self.bloque.bloque}-{self.cama.cama}-{self.lado.lado}"
     
     def __repr__(self):
         return f'<BloqueCamaLado {self.bloque_id}-{self.cama_id}-{self.lado_id}>'
@@ -115,6 +185,11 @@ class FlorColor(db.Model):
     
     __table_args__ = (db.UniqueConstraint('flor_id', 'color_id'),)
     
+    # Propiedad híbrida para obtener la descripción completa
+    @hybrid_property
+    def descripcion_completa(self):
+        return f"{self.flor.flor} {self.color.color}"
+    
     def __repr__(self):
         return f'<FlorColor {self.flor_id}-{self.color_id}>'
 
@@ -127,6 +202,15 @@ class Variedad(db.Model):
     # Relación
     flor_color = db.relationship('FlorColor', backref='variedades')
     
+    # Propiedades híbridas para acceso directo a información relacionada
+    @hybrid_property
+    def flor_nombre(self):
+        return self.flor_color.flor.flor
+    
+    @hybrid_property
+    def color_nombre(self):
+        return self.flor_color.color.color
+    
     def __repr__(self):
         return f'<Variedad {self.variedad}>'
 
@@ -134,7 +218,7 @@ class Area(db.Model):
     __tablename__ = 'areas'
     area_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     siembra = db.Column(db.String(20), nullable=False, unique=True)
-    area = db.Column(db.Float, nullable=False, unique=True)
+    area = db.Column(db.Float, nullable=False)
     
     def __repr__(self):
         return f'<Area {self.siembra}>'
@@ -167,6 +251,35 @@ class Siembra(db.Model):
     densidad = db.relationship('Densidad', backref='siembras')
     usuario = db.relationship('Usuario', backref='siembras')
     
+    # Métodos para operaciones comunes
+    def finalizar(self):
+        """Finaliza la siembra cambiando su estado"""
+        self.estado = 'Finalizada'
+        db.session.commit()
+    
+    def registrar_inicio_corte(self, fecha_inicio):
+        """Registra la fecha de inicio de corte"""
+        if not self.fecha_inicio_corte:
+            self.fecha_inicio_corte = fecha_inicio
+            db.session.commit()
+            return True
+        return False
+    
+    # Propiedades para calcular estadísticas
+    @hybrid_property
+    def total_tallos(self):
+        return sum(corte.cantidad_tallos for corte in self.cortes)
+    
+    @hybrid_property
+    def total_perdidas(self):
+        return sum(perdida.cantidad for perdida in self.perdidas)
+    
+    @hybrid_property
+    def dias_ciclo(self):
+        """Calcula días desde la siembra hasta hoy o hasta el último corte"""
+        ultima_fecha = max([corte.fecha_corte for corte in self.cortes]) if self.cortes else datetime.now().date()
+        return (ultima_fecha - self.fecha_siembra).days
+    
     def __repr__(self):
         return f'<Siembra {self.siembra_id}>'
 
@@ -185,6 +298,21 @@ class Corte(db.Model):
     usuario = db.relationship('Usuario', backref='cortes')
     
     __table_args__ = (db.UniqueConstraint('siembra_id', 'num_corte', name='siembra_corte_unique'),)
+    
+    @classmethod
+    def registrar(cls, siembra_id, num_corte, fecha_corte, cantidad_tallos, usuario_id):
+        """Método para registrar un nuevo corte utilizando el procedimiento almacenado"""
+        sql = text("""
+            CALL registrar_corte(:siembra_id, :num_corte, :fecha_corte, :cantidad_tallos, :usuario_id)
+        """)
+        db.session.execute(sql, {
+            'siembra_id': siembra_id,
+            'num_corte': num_corte,
+            'fecha_corte': fecha_corte,
+            'cantidad_tallos': cantidad_tallos,
+            'usuario_id': usuario_id
+        })
+        db.session.commit()
     
     def __repr__(self):
         return f'<Corte {self.corte_id}>'
@@ -215,3 +343,35 @@ class Perdida(db.Model):
     
     def __repr__(self):
         return f'<Perdida {self.perdida_id}>'
+
+# Clase para acceder a las vistas de la base de datos
+class VistaProduccionAcumulada(db.Model):
+    __tablename__ = 'vista_produccion_acumulada'
+    __table_args__ = {'info': {'is_view': True}}
+    
+    siembra_id = db.Column(db.Integer, primary_key=True)
+    bloque = db.Column(db.String(20))
+    cama = db.Column(db.String(10))
+    lado = db.Column(db.String(10))
+    variedad = db.Column(db.String(100))
+    flor = db.Column(db.String(10))
+    color = db.Column(db.String(20))
+    fecha_siembra = db.Column(db.Date)
+    fecha_inicio_corte = db.Column(db.Date)
+    total_tallos = db.Column(db.Integer)
+    total_cortes = db.Column(db.Integer)
+    total_perdidas = db.Column(db.Integer)
+    dias_ciclo = db.Column(db.Integer)
+
+# Clase para acceder a la vista por día de producción
+class VistaProduccionPorDia(db.Model):
+    __tablename__ = 'vista_produccion_por_dia'
+    __table_args__ = {'info': {'is_view': True}}
+    
+    # Al ser una vista necesitamos definir una clave primaria compuesta
+    variedad_id = db.Column(db.Integer, primary_key=True)
+    dias_desde_siembra = db.Column(db.Integer, primary_key=True)
+    variedad = db.Column(db.String(100))
+    flor = db.Column(db.String(10))
+    color = db.Column(db.String(20))
+    promedio_tallos = db.Column(db.Float)

@@ -1,24 +1,25 @@
+# Plantilla base de HTML para la aplicación Flask
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if title %}{{ title }} - {% endif %}Sistema de Camas Piloto</title>
-    
+    <title>{% if title %}{{ title }} - {% endif %}Gestión de Camas</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
-    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-    
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
     {% block styles %}{% endblock %}
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">Sistema de Camas Piloto</a>
+            <a class="navbar-brand" href="{{ url_for('main.index') }}">
+                <i class="fas fa-seedling"></i> Gestión de Camas
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -26,16 +27,29 @@
                 <ul class="navbar-nav me-auto">
                     {% if current_user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a class="nav-link {% if request.path == url_for('main.index') %}active{% endif %}" href="{{ url_for('main.index') }}">
+                            <i class="fas fa-home"></i> Inicio
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('siembras.index') }}">Siembras</a>
+                        <a class="nav-link {% if request.path == url_for('main.dashboard') %}active{% endif %}" href="{{ url_for('main.dashboard') }}">
+                            <i class="fas fa-chart-line"></i> Dashboard
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('cortes.index') }}">Cortes</a>
+                        <a class="nav-link {% if 'siembras' in request.path %}active{% endif %}" href="{{ url_for('siembras.index') }}">
+                            <i class="fas fa-leaf"></i> Siembras
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('reportes.index') }}">Reportes</a>
+                        <a class="nav-link {% if 'cortes' in request.path %}active{% endif %}" href="{{ url_for('cortes.index') }}">
+                            <i class="fas fa-cut"></i> Cortes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'perdidas' in request.path %}active{% endif %}" href="{{ url_for('perdidas.index') }}">
+                            <i class="fas fa-exclamation-triangle"></i> Pérdidas
+                        </a>
                     </li>
                     {% endif %}
                 </ul>
@@ -43,61 +57,55 @@
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ current_user.nombre_1 }} {{ current_user.apellido_1 }}
+                            <i class="fas fa-user"></i> {{ current_user.full_name }}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="#">Mi Perfil</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.register') }}"><i class="fas fa-user-plus"></i> Registrar Usuario</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">Cerrar Sesión</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
                         </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.login') }}">Iniciar Sesión</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.register') }}">Registrarse</a>
+                        <a class="nav-link" href="{{ url_for('auth.login') }}"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</a>
                     </li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </nav>
-    
-    <!-- Flash Messages -->
-    <div class="container mt-3">
+
+    <main class="container-fluid py-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
+        <div class="container">
             {% for category, message in messages %}
-                {% if category == 'error' %}
-                    {% set category = 'danger' %}
-                {% endif %}
-                <div class="alert alert-{{ category }}">
-                    {{ message }}
-                </div>
+            <div class="alert alert-{{ category if category != 'message' else 'info' }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             {% endfor %}
+        </div>
         {% endif %}
         {% endwith %}
-    </div>
-    
-    <!-- Main Content -->
-    <main class="py-4">
+
         {% block content %}{% endblock %}
     </main>
-    
-    <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-light">
+
+    <footer class="footer bg-light py-3 mt-auto border-top">
         <div class="container text-center">
-            <span class="text-muted">Sistema de Camas Piloto &copy; {{ now('%Y') }}</span>
+            <span class="text-muted">© {{ now('%Y') }} Gestión de Camas. Todos los derechos reservados.</span>
         </div>
     </footer>
-    
-    <!-- Bootstrap JS -->
+
+    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-    
     {% block scripts %}{% endblock %}
 </body>
 </html>

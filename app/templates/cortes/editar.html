@@ -1,73 +1,83 @@
+# Plantilla para editar un cortes
+
+{% set title = "Editar Corte" %}
+{% set description = "Formulario para editar un corte de siembra." %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block description %}{{ description }}{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
 <div class="container">
-    <h2>Editar Corte</h2>
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Corte #{{ corte.corte_id }} - Siembra #{{ siembra.siembra_id }}</h3>
+    <h1 class="mb-4">Editar Corte</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Siembra
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Detalles de Siembra</h5>
         </div>
         <div class="card-body">
-            <div class="mb-4">
-                <p><strong>Bloque:</strong> {{ siembra.bloque_cama.bloque.bloque }}</p>
-                <p><strong>Cama:</strong> {{ siembra.bloque_cama.cama.cama }}</p>
-                <p><strong>Lado:</strong> {{ siembra.bloque_cama.lado.lado }}</p>
-                <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
-                <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d/%m/%Y') }}</p>
-                <p><strong>Fecha de Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte.strftime('%d/%m/%Y') }}</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>ID:</strong> {{ siembra.siembra_id }}</p>
+                    <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
+                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d-%m-%Y') }}</p>
+                    <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte.strftime('%d-%m-%Y') }}</p>
+                    <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
+                </div>
             </div>
-            
+        </div>
+    </div>
+    
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">Editar Corte #{{ corte.corte_id }}</h5>
+        </div>
+        <div class="card-body">
             <form method="POST" action="">
                 {{ form.hidden_tag() }}
                 {{ form.siembra_id }}
                 
-                <div class="row">
-                    <div class="col-md-4">
+                <div class="row mb-3">
+                    <div class="col-md-6">
                         <div class="form-group">
                             {{ form.num_corte.label(class="form-label") }}
                             {{ form.num_corte(class="form-control") }}
-                            {% if form.num_corte.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.num_corte.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.num_corte.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
-                    
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="form-group">
                             {{ form.fecha_corte.label(class="form-label") }}
                             {{ form.fecha_corte(class="form-control", type="date") }}
-                            {% if form.fecha_corte.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.fecha_corte.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.cantidad_tallos.label(class="form-label") }}
-                            {{ form.cantidad_tallos(class="form-control") }}
-                            {% if form.cantidad_tallos.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.cantidad_tallos.errors %}
-                                        <small>{{ error }}</small>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
+                            {% for error in form.fecha_corte.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
                 
-                <div class="form-group mt-4">
-                    {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary">Cancelar</a>
+                <div class="form-group mb-3">
+                    {{ form.cantidad_tallos.label(class="form-label") }}
+                    {{ form.cantidad_tallos(class="form-control") }}
+                    {% for error in form.cantidad_tallos.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                    {{ form.submit(class="btn btn-primary", value="Actualizar Corte") }}
                 </div>
             </form>
         </div>
