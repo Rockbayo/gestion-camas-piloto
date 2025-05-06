@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from app import db
 from app.admin import bp
 from app.admin.forms import ImportDatasetForm, MappingVariedadesForm
+from app.models import Variedad, FlorColor, Flor, Color
 import os
 import pandas as pd
 import uuid
@@ -19,16 +20,16 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in {'xlsx', 'xls', 'csv'}
 
 # Vista principal de gestión de datasets
-@bp.route('/datasets_nuevo', methods=['GET'])
+@bp.route('/datasets', methods=['GET'])
 @login_required
-def datasets_nuevo():
+def datasets():
     return render_template('admin/datasets.html',
                           title='Gestión de Datasets')
 
 # Vista para seleccionar el tipo de dataset a importar
-@bp.route('/datasets_nuevo/importar', methods=['GET', 'POST'])
+@bp.route('/datasets/importar', methods=['GET', 'POST'])
 @login_required
-def importar_dataset_nuevo():
+def importar_dataset():
     # Crear directorio temp si no existe
     os.makedirs(TEMP_DIR, exist_ok=True)
     
@@ -57,10 +58,16 @@ def importar_dataset_nuevo():
                           title='Importar Dataset',
                           form=form)
 
-# Manejador unificado para previsualización
-@bp.route('/datasets_nuevo/preview/<dataset_type>', methods=['GET', 'POST'])
+@bp.route('/importar_variedades', methods=['GET', 'POST'])
 @login_required
-def preview_dataset_nuevo(dataset_type):
+def importar_variedades():
+    # Puedes redirigir a la vista genérica de importación con el tipo predefinido
+    return redirect(url_for('admin.importar_dataset', dataset_type='variedades'))
+
+# Manejador unificado para previsualización
+@bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
+@login_required
+def preview_dataset(dataset_type):
     if not current_user.has_permission('importar_datos'):
         flash('Acceso no autorizado', 'danger')
         return redirect(url_for('main.index'))
@@ -141,3 +148,39 @@ def preview_dataset_nuevo(dataset_type):
                          dataset_type=dataset_type,
                          import_stats=json.loads(session.pop('import_stats', '{}')),
                          import_errors=json.loads(session.pop('import_errors', '[]')))
+
+@bp.route('/variedades', methods=['GET'])
+@login_required
+def variedades():
+    # Puedes adaptar aquí la lógica del otro método que ya tienes
+    # basado en lo que veo en el código proporcionado
+    page = request.args.get('page', 1, type=int)
+    flor_filter = request.args.get('flor', '')
+    color_filter = request.args.get('color', '')
+    variedad_filter = request.args.get('variedad', '')
+    
+    # Consulta de variedades con posibles filtros
+    query = Variedad.query
+    
+    if flor_filter:
+        query = query.join(Variedad.flor_color).join(FlorColor.flor).filter(Flor.flor.ilike(f'%{flor_filter}%'))
+    if color_filter:
+        query = query.join(Variedad.flor_color).join(FlorColor.color).filter(Color.color.ilike(f'%{color_filter}%'))
+    if variedad_filter:
+        query = query.filter(Variedad.variedad.ilike(f'%{variedad_filter}%'))
+    
+    variedades = query.order_by(Variedad.variedad).paginate(
+        page=page, per_page=20)
+    
+    # Obtener listas para los filtros desplegables
+    flores = Flor.query.order_by(Flor.flor).all()
+    colores = Color.query.order_by(Color.color).all()
+    
+    return render_template('admin/variedades.html', 
+                          title='Gestión de Variedades',
+                          variedades=variedades,
+                          flores=flores,
+                          colores=colores,
+                          flor_filter=flor_filter,
+                          color_filter=color_filter,
+                          variedad_filter=variedad_filter)
