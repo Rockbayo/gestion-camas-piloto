@@ -18,9 +18,9 @@ class MappingVariedadesForm(FlaskForm):
     temp_file_path = HiddenField('Ruta del archivo', validators=[DataRequired()])
     
     # Selección de columnas para mapeo
-    flor_column = SelectField('Columna para Flor', validators=[DataRequired()])
-    color_column = SelectField('Columna para Color', validators=[DataRequired()])
-    variedad_column = SelectField('Columna para Variedad', validators=[DataRequired()])
+    flor_column = SelectField('Columna para Flor', choices=[('', 'Seleccione...')], validators=[DataRequired()])
+    color_column = SelectField('Columna para Color', choices=[('', 'Seleccione...')], validators=[DataRequired()])
+    variedad_column = SelectField('Columna para Variedad', choices=[('', 'Seleccione...')], validators=[DataRequired()])
     
     # Opciones adicionales
     skip_first_row = BooleanField('Omitir primera fila (encabezados)', default=True)

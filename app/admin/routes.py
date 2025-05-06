@@ -5,6 +5,7 @@ from app import db
 from app.admin import bp
 from app.admin.forms import ImportDatasetForm, MappingVariedadesForm
 from app.models import Variedad, FlorColor, Flor, Color
+from app.utils.dataset_importer import DatasetImporter
 import os
 import pandas as pd
 import uuid
@@ -36,23 +37,20 @@ def importar_dataset():
     form = ImportDatasetForm()
     
     if form.validate_on_submit():
-        # Guardar archivo temporalmente con un nombre único
-        f = form.excel_file.data
-        filename = secure_filename(f.filename)
-        file_id = str(uuid.uuid4())
-        temp_path = os.path.join(TEMP_DIR, f"{file_id}_{filename}")
-        
-        # Guardar archivo
-        f.save(temp_path)
+        # Guardar archivo temporalmente con un nombre único usando la nueva utilidad
+        temp_path = DatasetImporter.save_temp_file(form.excel_file.data)
         
         # Guardar información en la sesión
         session['temp_file'] = temp_path
         session['dataset_type'] = form.dataset_type.data
-        session['original_filename'] = filename
         
-        # Por ahora, simplemente mostrar un mensaje de éxito
-        flash(f'Archivo {filename} cargado correctamente. La importación será implementada pronto.', 'success')
-        return redirect(url_for('admin.datasets_nuevo'))
+        # Obtener el nombre del archivo original
+        original_filename = secure_filename(form.excel_file.data.filename)
+        session['original_filename'] = original_filename
+        
+        # Redirigir a la vista de previsualización
+        flash(f'Archivo {original_filename} cargado correctamente.', 'success')
+        return redirect(url_for('admin.preview_dataset', dataset_type=form.dataset_type.data))
     
     return render_template('admin/importar_dataset.html',
                           title='Importar Dataset',
@@ -76,78 +74,93 @@ def preview_dataset(dataset_type):
     temp_file = session.get('temp_file')
     if not temp_file or not os.path.exists(temp_file):
         flash('Sesión de importación inválida o archivo no encontrado', 'warning')
-        return redirect(url_for('admin.importar_dataset_nuevo'))
+        return redirect(url_for('admin.importar_dataset'))
     
-    # Cargar datos
-    try:
-        df = pd.read_excel(temp_file)
-        preview = {
-            'total_rows': len(df),
-            'columns': list(df.columns),
-            'preview_data': df.head(10).to_dict(orient='records')
-        }
-        
-        # Verificar columnas requeridas
-        required_columns = {
-            'variedades': ['FLOR', 'COLOR', 'VARIEDAD'],
-            'bloques': ['BLOQUE', 'CAMA'],
-            'areas': ['SIEMBRA', 'AREA'],
-            'densidades': ['DENSIDAD']
-        }.get(dataset_type, [])
-        
-        missing_columns = [col for col in required_columns if col not in 
-                          [c.upper() for c in df.columns]]
-        
-        preview['validation'] = {
-            'is_valid': len(missing_columns) == 0,
-            'message': "El dataset es válido para importación." if len(missing_columns) == 0 else 
-                      f"Faltan columnas requeridas: {', '.join(missing_columns)}"
-        }
-        
-        form = MappingVariedadesForm()
-        form.temp_file_path.data = temp_file
-        
-        # Configuración del formulario
-        if request.method == 'GET':
-            columns = preview.get('columns', [])
+    # Obtener vista previa usando la utilidad unificada
+    preview = DatasetImporter.preview_dataset(temp_file)
+    columns = preview.get('columns', [])
+    
+    # Crear el formulario y configurarlo con las columnas disponibles
+    form = MappingVariedadesForm()
+    form.temp_file_path.data = temp_file
+    
+    # Siempre configurar las opciones de los campos de selección
+    # para evitar el error "Choices cannot be None"
+    form.flor_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
+    form.color_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
+    form.variedad_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
+    
+    # Configuración adicional del formulario para el método GET
+    if request.method == 'GET':
+        if dataset_type == 'variedades':
+            # Detectar columnas automáticamente
+            flor_col = next((col for col in columns if 'FLOR' in col.upper()), None)
+            color_col = next((col for col in columns if 'COLOR' in col.upper()), None)
+            variedad_col = next((col for col in columns if 'VARIEDAD' in col.upper()), None)
             
-            if dataset_type == 'variedades':
-                # Detectar columnas automáticamente
-                flor_col = next((col for col in columns if 'FLOR' in col.upper()), '')
-                color_col = next((col for col in columns if 'COLOR' in col.upper()), '')
-                variedad_col = next((col for col in columns if 'VARIEDAD' in col.upper()), '')
-                
-                # Configurar opciones en los SelectField
-                form.flor_column.choices = [(col, col) for col in columns]
-                form.color_column.choices = [(col, col) for col in columns]
-                form.variedad_column.choices = [(col, col) for col in columns]
-                
-                # Preseleccionar columnas detectadas
-                if flor_col:
-                    form.flor_column.data = flor_col
-                if color_col:
-                    form.color_column.data = color_col
-                if variedad_col:
-                    form.variedad_column.data = variedad_col
+            # Preseleccionar columnas detectadas
+            if flor_col:
+                form.flor_column.data = flor_col
+            if color_col:
+                form.color_column.data = color_col
+            if variedad_col:
+                form.variedad_column.data = variedad_col
+    
+    if form.validate_on_submit():
+        # Preparar mapeo de columnas
+        column_mapping = {}
+        if dataset_type == 'variedades':
+            column_mapping = {
+                form.flor_column.data: 'FLOR',
+                form.color_column.data: 'COLOR',
+                form.variedad_column.data: 'VARIEDAD'
+            }
         
-        if form.validate_on_submit():
-            # Implementación simple - solo mostrar mensaje
-            flash('Función de importación en desarrollo', 'info')
+        # Realizar la importación o validación
+        success, message, stats = DatasetImporter.process_dataset(
+            temp_file,
+            dataset_type=dataset_type,
+            column_mapping=column_mapping,
+            validate_only=form.validate_only.data,
+            skip_first_row=form.skip_first_row.data
+        )
+        
+        # Guardar estadísticas en la sesión para mostrarlas
+        session['import_stats'] = json.dumps(stats)
+        
+        # Guardar errores en la sesión si los hay
+        error_details = stats.get('error_details', [])
+        session['import_errors'] = json.dumps(error_details)
+        
+        # Mostrar mensaje al usuario
+        flash_type = 'success' if success else 'danger'
+        flash(message, flash_type)
+        
+        # Si fue solo validación, redirigir de nuevo a la vista de previsualización
+        if form.validate_only.data:
+            return redirect(url_for('admin.preview_dataset', dataset_type=dataset_type))
+        
+        # Si fue importación exitosa, eliminar archivo temporal y redirigir
+        if success and not form.validate_only.data:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-            return redirect(url_for('admin.datasets_nuevo'))
+            return redirect(url_for('admin.datasets'))
             
-    except Exception as e:
-        flash(f'Error al procesar el dataset: {str(e)}', 'danger')
-        return redirect(url_for('admin.importar_dataset_nuevo'))
+        # Si el formulario se envía pero hay un error en la validación
+        if hasattr(form, 'back') and form.back.data:
+            return redirect(url_for('admin.importar_dataset'))
+    
+    # Importar estadísticas e información de errores desde la sesión
+    import_stats = json.loads(session.pop('import_stats', '{}'))
+    import_errors = json.loads(session.pop('import_errors', '[]'))
     
     return render_template('admin/preview_generic.html',
                          title=f'Previsualizar {dataset_type}',
                          form=form,
                          preview=preview,
                          dataset_type=dataset_type,
-                         import_stats=json.loads(session.pop('import_stats', '{}')),
-                         import_errors=json.loads(session.pop('import_errors', '[]')))
+                         import_stats=import_stats,
+                         import_errors=import_errors)
 
 @bp.route('/variedades', methods=['GET'])
 @login_required
