@@ -11,8 +11,31 @@ from app.models import (
 class DatasetImporter:
     """Clase para manejar la importación de diferentes tipos de datasets"""
     
-    @staticmethod
-    def import_variedades(file_path, column_mapping=None, validate_only=False):
+    def process_dataset(self, file_path, dataset_type, column_mapping=None, validate_only=False):
+        """
+        Procesa un dataset según su tipo.
+        
+        Args:
+            - file_path: Ruta del archivo Excel
+            - dataset_type: Tipo de dataset ('variedades', 'bloques', 'areas', 'densidades')
+            - column_mapping: Diccionario para mapear columnas personalizadas
+            - validate_only: Si es True, sólo valida el dataset sin importar
+        
+        Returns:
+            - (bool, str, dict): Tupla con estado, mensaje y estadísticas
+        """
+        if dataset_type == 'variedades':
+            return self.import_variedades(file_path, column_mapping, validate_only)
+        elif dataset_type == 'bloques':
+            return self.import_bloques_camas(file_path, column_mapping, validate_only)
+        elif dataset_type == 'areas':
+            return self.import_areas(file_path, column_mapping, validate_only)
+        elif dataset_type == 'densidades':
+            return self.import_densidades(file_path, column_mapping, validate_only)
+        else:
+            return False, f"Tipo de dataset no soportado: {dataset_type}", {}
+    
+    def import_variedades(self, file_path, column_mapping=None, validate_only=False):
         """
         Importa variedades desde un archivo Excel.
         
@@ -165,7 +188,8 @@ class DatasetImporter:
         except Exception as e:
             db.session.rollback()
             return False, f"Error durante la importación: {str(e)}", {}
-    
+
+
     @staticmethod
     def import_bloques_camas(file_path, column_mapping=None, validate_only=False):
         """

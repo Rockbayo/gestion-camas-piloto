@@ -1,9 +1,7 @@
-# app/admin/routes_dataset.py
 from flask import render_template, flash, redirect, url_for, request, jsonify, session, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
-from app.admin import bp
 from app.admin.forms import ImportDatasetForm, MappingVariedadesForm
 import os
 import pandas as pd
@@ -19,15 +17,11 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in {'xlsx', 'xls', 'csv'}
 
-@bp.route('/datasets', methods=['GET'])
-@login_required
 def datasets():
     """Vista principal de gestión de datasets"""
     return render_template('admin/datasets.html',
                           title='Gestión de Datasets')
 
-@bp.route('/datasets/importar', methods=['GET', 'POST'])
-@login_required
 def importar_dataset():
     """Vista para seleccionar el tipo de dataset a importar"""
     # Crear directorio temp si no existe
@@ -58,8 +52,6 @@ def importar_dataset():
                           title='Importar Dataset',
                           form=form)
 
-@bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
-@login_required
 def preview_dataset(dataset_type):
     """Manejador unificado para previsualización"""
     if not current_user.has_permission('importar_datos'):

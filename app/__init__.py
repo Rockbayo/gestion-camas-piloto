@@ -20,23 +20,22 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     
-    # Inicializar extensiones con la app
+    # Inicializar extensiones
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     
-    # Registrar blueprints
+    # Registrar blueprints - las rutas se importan automáticamente en __init__.py
+    from app.main import bp as main_bp
+    app.register_blueprint(main_bp)
+    
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
-
-    # Importar rutas
-    from app.admin import routes
-    from app.admin import routes_dataset
-
+    
     from app.siembras import bp as siembras_bp
     app.register_blueprint(siembras_bp, url_prefix='/siembras')
     
@@ -45,18 +44,14 @@ def create_app(config_class=Config):
     
     from app.perdidas import bp as perdidas_bp
     app.register_blueprint(perdidas_bp, url_prefix='/perdidas')
-
-    # Registrar blueprint de admin (ahora importa routes automáticamente)
-    from app.admin import bp as admin_bp
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-
+    
     # Manejar errores
     register_error_handlers(app)
     
     # Configurar comandos CLI
     register_cli_commands(app)
     
-    # Configurar logging
+    # Configurar logging...
     if not app.debug and not app.testing:
         if not os.path.exists('logs'):
             os.mkdir('logs')
