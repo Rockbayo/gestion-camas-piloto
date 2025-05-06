@@ -1,9 +1,7 @@
-# Inicialización de la aplicación Flask y configuración de extensiones
-# app/__init__.py
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -44,10 +42,10 @@ def create_app(config_class=Config):
     from app.perdidas import bp as perdidas_bp
     app.register_blueprint(perdidas_bp, url_prefix='/perdidas')
 
-    # Registrar blueprint de admin
+    # Registrar blueprint de admin (ahora importa routes automáticamente)
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
-    
+
     # Manejar errores
     register_error_handlers(app)
     
@@ -83,10 +81,8 @@ def register_cli_commands(app):
         """Inicializa la base de datos con datos básicos."""
         from app.models import Documento, Usuario
         
-        # Verificar si ya existen usuarios
         if Usuario.query.first() is None:
-            # Crear usuario admin si no existe
-            doc = Documento.query.get(1)  # Documento tipo Cédula
+            doc = Documento.query.get(1)
             if not doc:
                 doc = Documento(doc_id=1, documento='Cedula de Ciudadania')
                 db.session.add(doc)
@@ -105,7 +101,3 @@ def register_cli_commands(app):
             print("Base de datos inicializada con usuario admin")
         else:
             print("Ya existen usuarios en la base de datos")
-
-from flask import render_template
-from app import models
-

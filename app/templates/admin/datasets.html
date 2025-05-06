@@ -1,0 +1,115 @@
+<!-- app/templates/admin/datasets.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Gestión de Datasets</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Variedades</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Gestión de flores, colores y variedades para el sistema.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.variedades') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> Ver Listado
+                        </a>
+                        <a href="/admin/datasets/importar?dataset_type=variedades" class="btn btn-success">
+                            <i class="fas fa-file-import"></i> Importar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Bloques y Camas</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Gestión de bloques, camas y lados para ubicación de siembras.</p>
+                    <div class="d-grid gap-2">
+                        <a href="/admin/datasets/importar?dataset_type=bloques" class="btn btn-success">
+                            <i class="fas fa-file-import"></i> Importar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Áreas</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Gestión de áreas de siembra y sus medidas.</p>
+                    <div class="d-grid gap-2">
+                        <a href="/admin/datasets/importar?dataset_type=areas" class="btn btn-success">
+                            <i class="fas fa-file-import"></i> Importar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Densidades</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Gestión de densidades de siembra para el sistema.</p>
+                    <div class="d-grid gap-2">
+                        <a href="/admin/datasets/importar?dataset_type=densidades" class="btn btn-success">
+                            <i class="fas fa-file-import"></i> Importar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-3 shadow">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Instrucciones de Uso</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-info-circle text-primary"></i> Importación de Datasets</h5>
+                    <ol>
+                        <li>Seleccione el tipo de datos que desea importar haciendo clic en el botón "Importar" correspondiente.</li>
+                        <li>Cargue un archivo Excel con los datos en el formato especificado.</li>
+                        <li>Revise la vista previa de los datos para confirmar que se detectaron correctamente.</li>
+                        <li>Asigne columnas si es necesario y configure las opciones de importación.</li>
+                        <li>Utilice "Sólo validar" para verificar los datos sin importar, o proceda con la importación.</li>
+                    </ol>
+                </div>
+                <div class="col-md-6">
+                    <h5><i class="fas fa-file-excel text-success"></i> Formatos de Archivo</h5>
+                    <p>Para todos los datasets, se recomienda:</p>
+                    <ul>
+                        <li>Archivos Excel (.xlsx, .xls)</li>
+                        <li>Primera fila con encabezados</li>
+                        <li>Sin celdas combinadas</li>
+                        <li>Sin hojas múltiples (usar sólo la primera hoja)</li>
+                        <li>Columnas con nombres específicos según el tipo de datos</li>
+                    </ul>
+                    <p>Para más detalles, consulte la sección de ayuda en cada tipo de importación.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
