@@ -13,7 +13,7 @@ class ImportVariedadesForm(FlaskForm):
     submit = SubmitField('Cargar archivo')
 
 class MappingVariedadesForm(FlaskForm):
-    """Formulario para mapear columnas del Excel a campos del sistema"""
+    """Formulario para mapear columnas del Excel"""
     # Campo oculto para guardar la ruta temporal del archivo
     temp_file_path = HiddenField('Ruta del archivo', validators=[DataRequired()])
     

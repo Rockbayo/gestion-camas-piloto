@@ -30,9 +30,13 @@ def create_app(config_class=Config):
     from app.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
-    from app.main import bp as main_bp
-    app.register_blueprint(main_bp)
-    
+    from app.admin import bp as admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+
+    # Importar rutas
+    from app.admin import routes
+    from app.admin import routes_dataset
+
     from app.siembras import bp as siembras_bp
     app.register_blueprint(siembras_bp, url_prefix='/siembras')
     

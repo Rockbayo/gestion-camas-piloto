@@ -197,3 +197,47 @@ def _process_import(self, form, df, file_path, dataset_type):
         current_app.logger.error(f"Import error: {str(e)}", exc_info=True)
         flash('Error crítico durante la importación', 'danger')
         return redirect(url_for('admin.importar_dataset'))
+
+@bp.route('/datasets', methods=['GET'])
+@login_required
+def datasets():
+    """Vista principal de gestión de datasets"""
+    return render_template('admin/datasets.html',
+                          title='Gestión de Datasets')
+
+@bp.route('/datasets/importar', methods=['GET', 'POST'])
+@login_required
+def importar_dataset():
+    """Vista para seleccionar el tipo de dataset a importar"""
+    from app.admin.forms import ImportDatasetForm
+    import os
+    import uuid
+    
+    # Crear directorio temp si no existe
+    TEMP_DIR = 'uploads/temp'
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    
+    form = ImportDatasetForm()
+    
+    if form.validate_on_submit():
+        # Guardar archivo temporalmente con un nombre único
+        f = form.excel_file.data
+        filename = secure_filename(f.filename)
+        file_id = str(uuid.uuid4())
+        temp_path = os.path.join(TEMP_DIR, f"{file_id}_{filename}")
+        
+        # Guardar archivo
+        f.save(temp_path)
+        
+        # Guardar información en la sesión
+        session['temp_file'] = temp_path
+        session['dataset_type'] = form.dataset_type.data
+        session['original_filename'] = filename
+        
+        # Por ahora, simplemente mostrar un mensaje de éxito
+        flash(f'Archivo {filename} cargado correctamente. La importación será implementada pronto.', 'success')
+        return redirect(url_for('admin.datasets'))
+    
+    return render_template('admin/importar_dataset.html',
+                          title='Importar Dataset',
+                          form=form)       
