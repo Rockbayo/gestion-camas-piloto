@@ -4,11 +4,11 @@ from werkzeug.utils import secure_filename
 from app import db
 from app.admin import bp
 from app.admin.forms import (
-    ImportDatasetForm, MappingVariedadesForm, MappingBloquesForm, DensidadForm
+    ImportDatasetForm, MappingVariedadesForm, MappingBloquesForm, DensidadForm, MappingCausasForm
 )
 from app.models import (
     Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
-    Densidad, Siembra  # Asegúrate de importar el modelo Densidad y Siembra
+    Densidad, Causa
 )
 from app.utils.dataset_importer import DatasetImporter
 import os
@@ -111,6 +111,8 @@ def preview_dataset(dataset_type):
         form = MappingVariedadesForm()
     elif dataset_type == 'bloques':
         form = MappingBloquesForm()
+    elif dataset_type == 'causas':
+        form = MappingCausasForm()
     else:
         flash(f'Tipo de dataset no soportado: {dataset_type}', 'danger')
         return redirect(url_for('admin.datasets'))
@@ -157,6 +159,16 @@ def preview_dataset(dataset_type):
             if lado_col:
                 form.lado_column.data = lado_col
     
+    elif dataset_type == 'causas':
+        form.causa_column.choices = column_choices
+        
+        # Autodetectar columnas
+        if request.method == 'GET':
+            causa_col = next((col for col in columns if 'CAUSA' in col.upper()), None)
+            
+            if causa_col:
+                form.causa_column.data = causa_col
+    
     if form.validate_on_submit():
         # Preparar mapeo de columnas
         column_mapping = {}
@@ -174,6 +186,10 @@ def preview_dataset(dataset_type):
             # Agregar lado solo si se seleccionó una columna
             if form.lado_column.data:
                 column_mapping[form.lado_column.data] = 'LADO'
+        elif dataset_type == 'causas':
+            column_mapping = {
+                form.causa_column.data: 'CAUSA'
+            }
         
         # Realizar la importación o validación
         success, message, stats = DatasetImporter.process_dataset(
@@ -393,30 +409,23 @@ def editar_densidad():
         flash('Error en el formulario. Por favor, revise los campos.', 'danger')
         return redirect(url_for('admin.densidades'))
 
-@bp.route('/densidades/eliminar', methods=['POST'])
+@bp.route('/causas', methods=['GET'])
 @login_required
-def eliminar_densidad():
-    """Ruta para eliminar una densidad existente"""
-    if not current_user.has_permission('importar_datos'):
-        flash('Acceso no autorizado', 'danger')
-        return redirect(url_for('admin.densidades'))
-
-    densidad_id = request.form.get('densidad_id', type=int)
-
-    if not densidad_id:
-        flash('Densidad no especificada.', 'danger')
-        return redirect(url_for('admin.densidades'))
-
-    densidad = Densidad.query.get(densidad_id)
-    if not densidad:
-        flash('Densidad no encontrada.', 'danger')
-        return redirect(url_for('admin.densidades'))
-
-    try:
-        db.session.delete(densidad)
-        db.session.commit()
-        flash(f'Densidad "{densidad.densidad}" eliminada exitosamente.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al eliminar la densidad: {str(e)}', 'danger')
-    return redirect(url_for('admin.densidades'))
+def causas():
+    """Vista para mostrar listado de causas de pérdida importadas"""
+    page = request.args.get('page', 1, type=int)
+    causa_filter = request.args.get('causa', '')
+    
+    # Consulta de causas con posible filtro
+    query = Causa.query
+    
+    if causa_filter:
+        query = query.filter(Causa.causa.ilike(f'%{causa_filter}%'))
+    
+    causas_list = query.order_by(Causa.causa).paginate(
+        page=page, per_page=20)
+    
+    return render_template('admin/causas.html', 
+                          title='Gestión de Causas de Pérdida',
+                          causas=causas_list,
+                          causa_filter=causa_filter)

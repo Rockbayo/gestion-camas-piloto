@@ -15,6 +15,7 @@ def index():
         page=page, per_page=10)
     return render_template('perdidas/index.html', title='Pérdidas', perdidas=perdidas_list)
 
+# En app/perdidas/routes.py
 @bp.route('/crear/<int:siembra_id>', methods=['GET', 'POST'])
 @login_required
 def crear(siembra_id):
@@ -32,7 +33,7 @@ def crear(siembra_id):
         perdida = Perdida(
             siembra_id=siembra_id,
             causa_id=form.causa_id.data,
-            fecha_perdida=form.fecha_perdida.data,
+            # Ya no usamos fecha_perdida
             cantidad=form.cantidad.data,
             observaciones=form.observaciones.data,
             usuario_id=current_user.usuario_id
@@ -60,7 +61,7 @@ def editar(id):
     
     if form.validate_on_submit():
         perdida.causa_id = form.causa_id.data
-        perdida.fecha_perdida = form.fecha_perdida.data
+        # Ya no actualizamos fecha_perdida
         perdida.cantidad = form.cantidad.data
         perdida.observaciones = form.observaciones.data
         
@@ -72,7 +73,6 @@ def editar(id):
     if request.method == 'GET':
         form.siembra_id.data = perdida.siembra_id
         form.causa_id.data = perdida.causa_id
-        form.fecha_perdida.data = perdida.fecha_perdida
         form.cantidad.data = perdida.cantidad
         form.observaciones.data = perdida.observaciones
     

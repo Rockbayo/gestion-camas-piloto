@@ -79,7 +79,7 @@
                 </div>
             </div>
         </div>
-
+    
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow">
                 <div class="card-header bg-warning text-dark">
@@ -90,6 +90,22 @@
                     <div class="d-grid gap-2">
                         <a href="{{ url_for('admin.densidades') }}" class="btn btn-outline-primary">
                             <i class="fas fa-cog"></i> Configurar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Causas de Pérdida</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Gestión de causas de pérdida para el seguimiento de cultivos.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.causas') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> Ver Listado
                         </a>
                     </div>
                 </div>

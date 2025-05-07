@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.siembras import bp
 from app.siembras.forms import SiembraForm, InicioCorteForm
-from app.models import Siembra, BloqueCamaLado, Variedad, Area, Densidad, Flor, Color, FlorColor
+from app.models import Siembra, BloqueCamaLado, Variedad, Area, Densidad, Flor, Color, FlorColor, Bloque, Cama, Lado
 from datetime import datetime
 from sqlalchemy import and_
 
@@ -131,6 +131,7 @@ def crear():
 @bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required
 def editar(id):
+    # Obtener la siembra existente
     siembra = Siembra.query.get_or_404(id)
     
     # Verificar que la siembra esté activa
@@ -138,45 +139,77 @@ def editar(id):
         flash('No se pueden editar siembras finalizadas', 'warning')
         return redirect(url_for('siembras.index'))
     
+    # Obtener el bloque_cama_lado actual
+    bloque_cama = BloqueCamaLado.query.get(siembra.bloque_cama_id)
+    if not bloque_cama:
+        flash('Error: No se encontró la ubicación de la siembra', 'danger')
+        return redirect(url_for('siembras.index'))
+    
+    # Inicializar el formulario
     form = SiembraForm()
     
+    # Si se envía el formulario y pasa la validación
     if form.validate_on_submit():
-        # Buscar o crear bloque_cama_lado
-        bloque_cama = BloqueCamaLado.query.filter_by(
-            bloque_id=form.bloque_id.data,
-            cama_id=form.cama_id.data,
-            lado_id=form.lado_id.data
-        ).first()
-        
-        if not bloque_cama:
-            bloque_cama = BloqueCamaLado(
+        try:
+            # Buscar si ya existe la combinación bloque-cama-lado solicitada
+            nueva_ubicacion = BloqueCamaLado.query.filter_by(
                 bloque_id=form.bloque_id.data,
                 cama_id=form.cama_id.data,
                 lado_id=form.lado_id.data
-            )
-            db.session.add(bloque_cama)
+            ).first()
+            
+            # Si no existe, crear una nueva
+            if not nueva_ubicacion:
+                nueva_ubicacion = BloqueCamaLado(
+                    bloque_id=form.bloque_id.data,
+                    cama_id=form.cama_id.data,
+                    lado_id=form.lado_id.data
+                )
+                db.session.add(nueva_ubicacion)
+                db.session.flush()  # Para obtener el ID generado
+            
+            # Actualizar la siembra con los nuevos datos
+            siembra.bloque_cama_id = nueva_ubicacion.bloque_cama_id
+            siembra.variedad_id = form.variedad_id.data
+            siembra.densidad_id = form.densidad_id.data
+            siembra.fecha_siembra = form.fecha_siembra.data
+            
+            # Si se proporciona un nuevo área_id, actualizarlo
+            if form.area_id.data:
+                siembra.area_id = form.area_id.data
+            
+            # Guardar los cambios
             db.session.commit()
+            
+            flash('La siembra ha sido actualizada exitosamente!', 'success')
+            return redirect(url_for('siembras.detalles', id=siembra.siembra_id))
         
-        siembra.bloque_cama_id = bloque_cama.bloque_cama_id
-        siembra.variedad_id = form.variedad_id.data
-        siembra.area_id = form.area_id.data
-        siembra.densidad_id = form.densidad_id.data
-        siembra.fecha_siembra = form.fecha_siembra.data
-        
-        db.session.commit()
-        flash('La siembra ha sido actualizada exitosamente!', 'success')
-        return redirect(url_for('siembras.index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la siembra: {str(e)}', 'danger')
     
+    # Si es una solicitud GET o si hay errores en el formulario
     # Prellenar el formulario con los datos existentes
     if request.method == 'GET':
-        bloque_cama = BloqueCamaLado.query.get(siembra.bloque_cama_id)
         form.bloque_id.data = bloque_cama.bloque_id
         form.cama_id.data = bloque_cama.cama_id
         form.lado_id.data = bloque_cama.lado_id
         form.variedad_id.data = siembra.variedad_id
-        form.area_id.data = siembra.area_id
         form.densidad_id.data = siembra.densidad_id
         form.fecha_siembra.data = siembra.fecha_siembra
+        form.area_id.data = siembra.area_id
+        
+        # Obtener la cantidad de plantas basada en el área y densidad
+        try:
+            area = Area.query.get(siembra.area_id)
+            densidad = Densidad.query.get(siembra.densidad_id)
+            if area and densidad and densidad.valor > 0:
+                cantidad_plantas = int(area.area * densidad.valor)
+                form.cantidad_plantas.data = cantidad_plantas
+            else:
+                form.cantidad_plantas.data = 0
+        except Exception as e:
+            form.cantidad_plantas.data = 0
     
     return render_template('siembras/editar.html', title='Editar Siembra', form=form, siembra=siembra)
 
@@ -203,10 +236,15 @@ def inicio_corte(id):
             flash('La fecha de inicio de corte no puede ser anterior a la fecha de siembra', 'danger')
             return redirect(url_for('siembras.inicio_corte', id=id))
         
+        # Asignar fecha de inicio de corte y guardar
         siembra.fecha_inicio_corte = form.fecha_inicio_corte.data
-        db.session.commit()
-        flash('Fecha de inicio de corte registrada con éxito!', 'success')
-        return redirect(url_for('siembras.detalles', id=id))
+        try:
+            db.session.commit()
+            flash('Fecha de inicio de corte registrada con éxito!', 'success')
+            return redirect(url_for('siembras.detalles', id=id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al registrar inicio de corte: {str(e)}', 'danger')
     
     return render_template('siembras/inicio_corte.html', title='Registrar Inicio de Corte', form=form, siembra=siembra)
 
@@ -230,3 +268,25 @@ def finalizar(id):
 def detalles(id):
     siembra = Siembra.query.get_or_404(id)
     return render_template('siembras/detalles.html', title='Detalles de Siembra', siembra=siembra)
+
+# En app/admin/routes.py
+@bp.route('/causas', methods=['GET'])
+@login_required
+def causas():
+    """Vista para mostrar listado de causas de pérdida importadas"""
+    page = request.args.get('page', 1, type=int)
+    causa_filter = request.args.get('causa', '')
+    
+    # Consulta de causas con posible filtro
+    query = Causa.query
+    
+    if causa_filter:
+        query = query.filter(Causa.causa.ilike(f'%{causa_filter}%'))
+    
+    causas_list = query.order_by(Causa.causa).paginate(
+        page=page, per_page=20)
+    
+    return render_template('admin/causas.html', 
+                          title='Gestión de Causas de Pérdida',
+                          causas=causas_list,
+                          causa_filter=causa_filter)

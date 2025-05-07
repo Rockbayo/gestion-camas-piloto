@@ -36,25 +36,17 @@
             <h5 class="card-title mb-0">Editar Pérdida #{{ perdida.perdida_id }}</h5>
         </div>
         <div class="card-body">
+            <!-- app/templates/perdidas/editar.html (parcial) -->
             <form method="POST" action="">
                 {{ form.hidden_tag() }}
                 {{ form.siembra_id }}
                 
                 <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="form-group">
                             {{ form.causa_id.label(class="form-label") }}
                             {{ form.causa_id(class="form-select") }}
                             {% for error in form.causa_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.fecha_perdida.label(class="form-label") }}
-                            {{ form.fecha_perdida(class="form-control", type="date") }}
-                            {% for error in form.fecha_perdida.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
                         </div>

@@ -5,10 +5,11 @@ from wtforms.validators import DataRequired, NumberRange, ValidationError
 from app.models import Causa, Siembra
 from datetime import datetime
 
+# En app/perdidas/forms.py
 class PerdidaForm(FlaskForm):
     siembra_id = HiddenField('ID Siembra', validators=[DataRequired()])
     causa_id = SelectField('Causa de Pérdida', coerce=int, validators=[DataRequired()])
-    fecha_perdida = DateField('Fecha de Pérdida', format='%Y-%m-%d', validators=[DataRequired()])
+    # Eliminamos el campo fecha_perdida
     cantidad = IntegerField('Cantidad', validators=[DataRequired(), NumberRange(min=1, message="La cantidad debe ser mayor a 0")])
     observaciones = TextAreaField('Observaciones')
     submit = SubmitField('Registrar Pérdida')
