@@ -10,11 +10,8 @@
             <i class="fas fa-arrow-left"></i> Volver
         </a>
         <div>
-            <a href="{{ url_for('admin.importar_dataset') }}" class="btn btn-success me-2">
-                <i class="fas fa-file-import"></i> Importar Variedades (Mejorado)
-            </a>
-            <a href="{{ url_for('admin.importar_variedades') }}" class="btn btn-outline-success">
-                <i class="fas fa-file-import"></i> Importar Variedades (Clásico)
+            <a href="{{ url_for('admin.datasets') }}" class="btn btn-success me-2">
+                <i class="fas fa-file-import"></i> Importar Variedades
             </a>
         </div>
     </div>
@@ -172,7 +169,7 @@
             </div>
             {% else %}
             <div class="alert alert-info">
-                No hay variedades registradas que coincidan con los filtros. <a href="{{ url_for('admin.importar_dataset') }}" class="alert-link">Importar variedades</a>.
+                No hay variedades registradas que coincidan con los filtros. <a href="{{ url_for('admin.datasets') }}" class="alert-link">Importar variedades</a>.
             </div>
             {% endif %}
         </div>

@@ -3,13 +3,19 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import db
 from app.admin import bp
-from app.admin.forms import ImportDatasetForm, MappingVariedadesForm
-from app.models import Variedad, FlorColor, Flor, Color
+from app.admin.forms import (
+    ImportDatasetForm, MappingVariedadesForm, MappingBloquesForm, DensidadForm
+)
+from app.models import (
+    Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
+    Densidad, Siembra  # Asegúrate de importar el modelo Densidad y Siembra
+)
 from app.utils.dataset_importer import DatasetImporter
 import os
 import pandas as pd
 import uuid
 import json
+from flask_wtf import CSRFProtect
 
 # Configuración de directorios
 TEMP_DIR = os.path.join('uploads', 'temp')
@@ -21,23 +27,49 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in {'xlsx', 'xls', 'csv'}
 
 # Vista principal de gestión de datasets
-@bp.route('/datasets', methods=['GET'])
+@bp.route('/datasets', methods=['GET', 'POST'])
 @login_required
 def datasets():
+    """Vista principal para gestión de datasets"""
+    # Limpiar sesión de importaciones anteriores
+    if 'temp_file' in session:
+        temp_file = session.pop('temp_file')
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except:
+                pass
+    
+    form = ImportDatasetForm()
+    
+    if form.validate_on_submit():
+        # Guardar archivo temporalmente
+        temp_path = DatasetImporter.save_temp_file(form.excel_file.data)
+        
+        # Guardar información en la sesión
+        session['temp_file'] = temp_path
+        session['dataset_type'] = form.dataset_type.data
+        session['original_filename'] = secure_filename(form.excel_file.data.filename)
+        
+        # Redirigir a la vista de previsualización
+        flash(f'Archivo cargado correctamente.', 'success')
+        return redirect(url_for('admin.preview_dataset', dataset_type=form.dataset_type.data))
+    
     return render_template('admin/datasets.html',
-                          title='Gestión de Datasets')
+                          title='Gestión de Datasets',
+                          form=form)
 
-# Vista para seleccionar el tipo de dataset a importar
-@bp.route('/datasets/importar', methods=['GET', 'POST'])
+@bp.route('/importar_dataset', methods=['GET', 'POST'])
 @login_required
 def importar_dataset():
+    """Vista para seleccionar el tipo de dataset a importar"""
     # Crear directorio temp si no existe
     os.makedirs(TEMP_DIR, exist_ok=True)
     
     form = ImportDatasetForm()
     
     if form.validate_on_submit():
-        # Guardar archivo temporalmente con un nombre único usando la nueva utilidad
+        # Guardar archivo temporalmente con un nombre único
         temp_path = DatasetImporter.save_temp_file(form.excel_file.data)
         
         # Guardar información en la sesión
@@ -55,12 +87,6 @@ def importar_dataset():
     return render_template('admin/importar_dataset.html',
                           title='Importar Dataset',
                           form=form)
-
-@bp.route('/importar_variedades', methods=['GET', 'POST'])
-@login_required
-def importar_variedades():
-    # Puedes redirigir a la vista genérica de importación con el tipo predefinido
-    return redirect(url_for('admin.importar_dataset', dataset_type='variedades'))
 
 # Manejador unificado para previsualización
 @bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
@@ -80,31 +106,56 @@ def preview_dataset(dataset_type):
     preview = DatasetImporter.preview_dataset(temp_file)
     columns = preview.get('columns', [])
     
-    # Crear el formulario y configurarlo con las columnas disponibles
-    form = MappingVariedadesForm()
+    # Crear el formulario apropiado según el tipo de dataset
+    if dataset_type == 'variedades':
+        form = MappingVariedadesForm()
+    elif dataset_type == 'bloques':
+        form = MappingBloquesForm()
+    else:
+        flash(f'Tipo de dataset no soportado: {dataset_type}', 'danger')
+        return redirect(url_for('admin.datasets'))
+    
     form.temp_file_path.data = temp_file
     
     # Siempre configurar las opciones de los campos de selección
-    # para evitar el error "Choices cannot be None"
-    form.flor_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
-    form.color_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
-    form.variedad_column.choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
+    column_choices = [(col, col) for col in columns] or [('', 'No hay columnas disponibles')]
     
-    # Configuración adicional del formulario para el método GET
-    if request.method == 'GET':
-        if dataset_type == 'variedades':
-            # Detectar columnas automáticamente
+    # Configurar campos específicos según el tipo de dataset
+    if dataset_type == 'variedades':
+        form.flor_column.choices = column_choices
+        form.color_column.choices = column_choices
+        form.variedad_column.choices = column_choices
+        
+        # Autodetectar columnas
+        if request.method == 'GET':
             flor_col = next((col for col in columns if 'FLOR' in col.upper()), None)
             color_col = next((col for col in columns if 'COLOR' in col.upper()), None)
             variedad_col = next((col for col in columns if 'VARIEDAD' in col.upper()), None)
             
-            # Preseleccionar columnas detectadas
             if flor_col:
                 form.flor_column.data = flor_col
             if color_col:
                 form.color_column.data = color_col
             if variedad_col:
                 form.variedad_column.data = variedad_col
+    
+    elif dataset_type == 'bloques':
+        form.bloque_column.choices = column_choices
+        form.cama_column.choices = column_choices
+        form.lado_column.choices = column_choices
+        
+        # Autodetectar columnas
+        if request.method == 'GET':
+            bloque_col = next((col for col in columns if 'BLOQUE' in col.upper()), None)
+            cama_col = next((col for col in columns if 'CAMA' in col.upper()), None)
+            lado_col = next((col for col in columns if 'LADO' in col.upper()), None)
+            
+            if bloque_col:
+                form.bloque_column.data = bloque_col
+            if cama_col:
+                form.cama_column.data = cama_col
+            if lado_col:
+                form.lado_column.data = lado_col
     
     if form.validate_on_submit():
         # Preparar mapeo de columnas
@@ -115,6 +166,14 @@ def preview_dataset(dataset_type):
                 form.color_column.data: 'COLOR',
                 form.variedad_column.data: 'VARIEDAD'
             }
+        elif dataset_type == 'bloques':
+            column_mapping = {
+                form.bloque_column.data: 'BLOQUE',
+                form.cama_column.data: 'CAMA'
+            }
+            # Agregar lado solo si se seleccionó una columna
+            if form.lado_column.data:
+                column_mapping[form.lado_column.data] = 'LADO'
         
         # Realizar la importación o validación
         success, message, stats = DatasetImporter.process_dataset(
@@ -197,3 +256,167 @@ def variedades():
                           flor_filter=flor_filter,
                           color_filter=color_filter,
                           variedad_filter=variedad_filter)
+
+
+@bp.route('/bloques', methods=['GET'])
+@login_required
+def bloques():
+    """Vista para mostrar listado de bloques, camas y lados importados"""
+    page = request.args.get('page', 1, type=int)
+    bloque_filter = request.args.get('bloque', '')
+    cama_filter = request.args.get('cama', '')
+    lado_filter = request.args.get('lado', '')
+    
+    # Consulta de bloques_camas_lado con posibles filtros
+    query = BloqueCamaLado.query
+    
+    if bloque_filter:
+        query = query.join(BloqueCamaLado.bloque).filter(Bloque.bloque.ilike(f'%{bloque_filter}%'))
+    if cama_filter:
+        query = query.join(BloqueCamaLado.cama).filter(Cama.cama.ilike(f'%{cama_filter}%'))
+    if lado_filter:
+        query = query.join(BloqueCamaLado.lado).filter(Lado.lado.ilike(f'%{lado_filter}%'))
+    
+    # Ordenar resultados primero por bloque, luego por cama, finalmente por lado
+    query = query.join(BloqueCamaLado.bloque).join(BloqueCamaLado.cama).join(BloqueCamaLado.lado)
+    query = query.order_by(Bloque.bloque, Cama.cama, Lado.lado)
+    
+    # Paginar resultados
+    bloques_camas = query.paginate(page=page, per_page=20)
+    
+    # Obtener listas para los filtros desplegables
+    bloques = Bloque.query.order_by(Bloque.bloque).all()
+    camas = Cama.query.order_by(Cama.cama).all()
+    lados = Lado.query.order_by(Lado.lado).all()
+    
+    return render_template('admin/bloques.html', 
+                          title='Gestión de Bloques y Camas',
+                          bloques_camas=bloques_camas,
+                          bloques=bloques,
+                          camas=camas,
+                          lados=lados,
+                          bloque_filter=bloque_filter,
+                          cama_filter=cama_filter,
+                          lado_filter=lado_filter)
+
+# Añadir al archivo app/admin/routes.py
+
+@bp.route('/densidades', methods=['GET'])
+@login_required
+def densidades():
+    """Vista para administrar densidades"""
+    densidades = Densidad.query.order_by(Densidad.densidad).all()
+    form = DensidadForm()  # Inicializa el formulario
+    return render_template('admin/densidades.html',
+                           title='Gestión de Densidades',
+                           densidades=densidades,
+                           form=form)  # Asegúrate de pasar 'form' aquí
+
+@bp.route('/densidades/crear', methods=['POST'])
+@login_required
+def crear_densidad():
+    """Ruta para crear una nueva densidad"""
+    if not current_user.has_permission('importar_datos'):
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    form = DensidadForm()
+    if form.validate_on_submit():
+        nombre = form.densidad.data.strip()
+        valor = form.valor.data
+
+        # Verificar si ya existe una densidad con el mismo nombre
+        if Densidad.query.filter(Densidad.densidad.ilike(nombre)).first():
+            flash(f'Ya existe una densidad con el nombre "{nombre}".', 'danger')
+            return redirect(url_for('admin.densidades'))
+
+        # Crear la densidad
+        densidad = Densidad(densidad=nombre, valor=valor)
+        db.session.add(densidad)
+
+        try:
+            db.session.commit()
+            flash(f'Densidad "{nombre}" creada exitosamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear la densidad: {str(e)}', 'danger')
+        return redirect(url_for('admin.densidades'))
+    else:
+        flash('Error en el formulario. Por favor, revise los campos.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+@bp.route('/densidades/editar', methods=['POST'])
+@login_required
+def editar_densidad():
+    """Ruta para editar una densidad existente"""
+    if not current_user.has_permission('importar_datos'):
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    form = DensidadForm()
+    if form.validate_on_submit():
+        densidad_id = request.form.get('densidad_id', type=int)
+        nombre = form.densidad.data.strip()
+        valor = form.valor.data
+
+        if not densidad_id:
+            flash('Densidad no especificada.', 'danger')
+            return redirect(url_for('admin.densidades'))
+
+        # Buscar la densidad
+        densidad = Densidad.query.get(densidad_id)
+        if not densidad:
+            flash('Densidad no encontrada.', 'danger')
+            return redirect(url_for('admin.densidades'))
+
+        # Verificar si el nuevo nombre ya está en uso por otra densidad
+        densidad_existente = Densidad.query.filter(
+            Densidad.densidad.ilike(nombre),
+            Densidad.densidad_id != densidad_id
+        ).first()
+
+        if densidad_existente:
+            flash(f'Ya existe otra densidad con el nombre "{nombre}".', 'danger')
+            return redirect(url_for('admin.densidades'))
+
+        # Actualizar la densidad
+        densidad.densidad = nombre
+        densidad.valor = valor
+        try:
+            db.session.commit()
+            flash(f'Densidad "{nombre}" actualizada exitosamente.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al actualizar la densidad: {str(e)}', 'danger')
+        return redirect(url_for('admin.densidades'))
+    else:
+        flash('Error en el formulario. Por favor, revise los campos.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+@bp.route('/densidades/eliminar', methods=['POST'])
+@login_required
+def eliminar_densidad():
+    """Ruta para eliminar una densidad existente"""
+    if not current_user.has_permission('importar_datos'):
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    densidad_id = request.form.get('densidad_id', type=int)
+
+    if not densidad_id:
+        flash('Densidad no especificada.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    densidad = Densidad.query.get(densidad_id)
+    if not densidad:
+        flash('Densidad no encontrada.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    try:
+        db.session.delete(densidad)
+        db.session.commit()
+        flash(f'Densidad "{densidad.densidad}" eliminada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la densidad: {str(e)}', 'danger')
+    return redirect(url_for('admin.densidades'))

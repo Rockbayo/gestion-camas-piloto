@@ -227,9 +227,11 @@ class Densidad(db.Model):
     __tablename__ = 'densidades'
     densidad_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     densidad = db.Column(db.String(20), nullable=False, unique=True)
+    # Nuevo campo para el valor de plantas por metro cuadrado
+    valor = db.Column(db.Float, nullable=False, default=1.0)
     
     def __repr__(self):
-        return f'<Densidad {self.densidad}>'
+        return f'<Densidad {self.densidad} ({self.valor} plantas/m²)>'
 
 class Siembra(db.Model):
     __tablename__ = 'siembras'
@@ -375,3 +377,5 @@ class VistaProduccionPorDia(db.Model):
     flor = db.Column(db.String(10))
     color = db.Column(db.String(20))
     promedio_tallos = db.Column(db.Float)
+
+    

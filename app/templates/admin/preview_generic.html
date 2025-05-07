@@ -6,7 +6,7 @@
     <h1 class="mb-4">Previsualizar Dataset: {{ dataset_type|capitalize }}</h1>
     
     <div class="mb-3">
-        <a href="{{ url_for('admin.importar_dataset') }}" class="btn btn-secondary">
+        <a href="{{ url_for('admin.datasets') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
     </div>
@@ -101,24 +101,10 @@
                                 <span class="badge bg-info rounded-pill">{{ import_stats.lados_nuevos }}</span>
                             </li>
                             {% endif %}
-                        {% elif dataset_type == 'areas' %}
-                            {% if import_stats.areas_nuevas is defined %}
+                            {% if import_stats.combinaciones_nuevas is defined %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Áreas nuevas
-                                <span class="badge bg-info rounded-pill">{{ import_stats.areas_nuevas }}</span>
-                            </li>
-                            {% endif %}
-                            {% if import_stats.areas_actualizadas is defined %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Áreas actualizadas
-                                <span class="badge bg-info rounded-pill">{{ import_stats.areas_actualizadas }}</span>
-                            </li>
-                            {% endif %}
-                        {% elif dataset_type == 'densidades' %}
-                            {% if import_stats.densidades_nuevas is defined %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                Densidades nuevas
-                                <span class="badge bg-info rounded-pill">{{ import_stats.densidades_nuevas }}</span>
+                                Ubicaciones nuevas
+                                <span class="badge bg-info rounded-pill">{{ import_stats.combinaciones_nuevas }}</span>
                             </li>
                             {% endif %}
                         {% endif %}
@@ -173,38 +159,66 @@
             <form method="POST" action="">
                 {{ form.hidden_tag() }}
                 
-                <!-- Campos de mapeo específicos según el tipo de dataset -->
-                {% if dataset_type == 'variedades' %}
+                <!-- Mapeo de columnas dinámico según el tipo de dataset -->
                 <div class="row mb-3">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.flor_column.label(class="form-label") }}
-                            {{ form.flor_column(class="form-select") }}
-                            {% for error in form.flor_column.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
+                    {% if dataset_type == 'variedades' %}
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.flor_column.label(class="form-label") }}
+                                {{ form.flor_column(class="form-select") }}
+                                {% for error in form.flor_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.color_column.label(class="form-label") }}
-                            {{ form.color_column(class="form-select") }}
-                            {% for error in form.color_column.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.color_column.label(class="form-label") }}
+                                {{ form.color_column(class="form-select") }}
+                                {% for error in form.color_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.variedad_column.label(class="form-label") }}
-                            {{ form.variedad_column(class="form-select") }}
-                            {% for error in form.variedad_column.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.variedad_column.label(class="form-label") }}
+                                {{ form.variedad_column(class="form-select") }}
+                                {% for error in form.variedad_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
                         </div>
-                    </div>
+                    {% elif dataset_type == 'bloques' %}
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.bloque_column.label(class="form-label") }}
+                                {{ form.bloque_column(class="form-select") }}
+                                {% for error in form.bloque_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.cama_column.label(class="form-label") }}
+                                {{ form.cama_column(class="form-select") }}
+                                {% for error in form.cama_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                {{ form.lado_column.label(class="form-label") }}
+                                {{ form.lado_column(class="form-select") }}
+                                {% for error in form.lado_column.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
-                {% endif %}
                 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -222,7 +236,7 @@
                 </div>
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    {{ form.back(class="btn btn-secondary me-md-2") }}
+                    <a href="{{ url_for('admin.datasets') }}" class="btn btn-secondary me-md-2">Cancelar</a>
                     {{ form.submit(class="btn btn-primary") }}
                 </div>
             </form>

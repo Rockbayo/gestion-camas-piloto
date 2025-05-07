@@ -1,10 +1,4 @@
-<!-- Plantilla para crear una nueva siembra -->
-
-{% set title = "Crear Nueva Siembra" %}
-{% set description = "Formulario para registrar una nueva siembra en el sistema." %}
-
-{% block title %}{{ title }}{% endblock %}
-{% block description %}{{ description }}{% endblock %}
+<!-- app/templates/siembras/crear.html -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -22,10 +16,13 @@
             <h5 class="card-title mb-0">Formulario de Registro</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="">
+            <form method="POST" action="" id="siembraForm">
                 {{ form.hidden_tag() }}
                 
-                <div class="row mb-3">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Ubicación</h5>
+                    </div>
                     <div class="col-md-4">
                         <div class="form-group">
                             {{ form.bloque_id.label(class="form-label") }}
@@ -55,17 +52,45 @@
                     </div>
                 </div>
                 
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Variedad</h5>
+                    </div>
+                    <!-- Filtros de Flor y Color -->
+                    <div class="col-md-3">
                         <div class="form-group">
-                            {{ form.variedad_id.label(class="form-label") }}
-                            {{ form.variedad_id(class="form-select") }}
-                            {% for error in form.variedad_id.errors %}
+                            {{ form.flor_id.label(class="form-label") }}
+                            {{ form.flor_id(class="form-select", id="flor_id") }}
+                            {% for error in form.flor_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {{ form.color_id.label(class="form-label") }}
+                            {{ form.color_id(class="form-select", id="color_id") }}
+                            {% for error in form.color_id.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
                         </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.variedad_id.label(class="form-label") }}
+                            {{ form.variedad_id(class="form-select", id="variedad_id") }}
+                            {% for error in form.variedad_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Información de Siembra</h5>
+                    </div>
+                    <div class="col-md-4">
                         <div class="form-group">
                             {{ form.fecha_siembra.label(class="form-label") }}
                             {{ form.fecha_siembra(class="form-control", type="date") }}
@@ -74,25 +99,42 @@
                             {% endfor %}
                         </div>
                     </div>
-                </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
-                            {{ form.area_id.label(class="form-label") }}
-                            {{ form.area_id(class="form-select") }}
-                            {% for error in form.area_id.errors %}
+                            {{ form.cantidad_plantas.label(class="form-label") }}
+                            {{ form.cantidad_plantas(class="form-control", id="cantidad_plantas") }}
+                            {% for error in form.cantidad_plantas.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             {{ form.densidad_id.label(class="form-label") }}
-                            {{ form.densidad_id(class="form-select") }}
+                            {{ form.densidad_id(class="form-select", id="densidad_id") }}
                             {% for error in form.densidad_id.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Área Calculada</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="area_calculada" readonly>
+                                <span class="input-group-text">m²</span>
+                            </div>
+                            <small class="form-text text-muted">Área calculada automáticamente según cantidad de plantas y densidad.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Área Asignada</label>
+                            <input type="text" class="form-control" id="area_asignada" readonly>
+                            {{ form.area_id(id="area_id") }}
                         </div>
                     </div>
                 </div>
@@ -105,4 +147,80 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const florSelect = document.getElementById('flor_id');
+        const colorSelect = document.getElementById('color_id');
+        const variedadSelect = document.getElementById('variedad_id');
+        const cantidadPlantasInput = document.getElementById('cantidad_plantas');
+        const densidadSelect = document.getElementById('densidad_id');
+        const areaCalculadaInput = document.getElementById('area_calculada');
+        const areaAsignadaInput = document.getElementById('area_asignada');
+        const areaIdInput = document.getElementById('area_id');
+        
+        // Función para filtrar variedades según flor y color seleccionados
+        function filtrarVariedades() {
+            const florId = florSelect.value;
+            const colorId = colorSelect.value;
+            
+            fetch(`{{ url_for('siembras.crear') }}?filter=true&flor_id=${florId}&color_id=${colorId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Limpiar select actual
+                    variedadSelect.innerHTML = '';
+                    
+                    // Agregar nuevas opciones
+                    data.forEach(variedad => {
+                        const option = document.createElement('option');
+                        option.value = variedad.id;
+                        option.textContent = variedad.text;
+                        variedadSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error al filtrar variedades:', error));
+        }
+        
+        // Función para calcular el área según cantidad de plantas y densidad
+        function calcularArea() {
+            const cantidadPlantas = cantidadPlantasInput.value;
+            const densidadId = densidadSelect.value;
+            
+            if (cantidadPlantas && densidadId) {
+                fetch(`{{ url_for('siembras.crear') }}?calculate=true&cantidad_plantas=${cantidadPlantas}&densidad_id=${densidadId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            areaCalculadaInput.value = 'Error';
+                        } else {
+                            areaCalculadaInput.value = data.area_calculada;
+                            areaIdInput.value = data.area_id || '';
+                            areaAsignadaInput.value = data.area_nombre || `ÁREA ${data.area_calculada}m²`;
+                        }
+                    })
+                    .catch(error => console.error('Error al calcular área:', error));
+            }
+        }
+        
+        // Escuchar cambios en los selects de flor y color
+        florSelect.addEventListener('change', filtrarVariedades);
+        colorSelect.addEventListener('change', filtrarVariedades);
+        
+        // Escuchar cambios en cantidad de plantas y densidad
+        cantidadPlantasInput.addEventListener('input', calcularArea);
+        densidadSelect.addEventListener('change', calcularArea);
+        
+        // Validación del formulario
+        const siembraForm = document.getElementById('siembraForm');
+        siembraForm.addEventListener('submit', function(event) {
+            // Verificar que se haya calculado un área
+            if (!areaCalculadaInput.value || areaCalculadaInput.value === 'Error') {
+                event.preventDefault();
+                alert('Por favor complete la cantidad de plantas y seleccione una densidad para calcular el área.');
+            }
+        });
+    });
+</script>
 {% endblock %}

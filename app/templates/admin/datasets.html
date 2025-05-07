@@ -11,8 +11,44 @@
         </a>
     </div>
     
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Importar Dataset</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('admin.importar_dataset') }}" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            {{ form.dataset_type.label(class="form-label") }}
+                            {{ form.dataset_type(class="form-select") }}
+                            {% for error in form.dataset_type.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            {{ form.excel_file.label(class="form-label") }}
+                            {{ form.excel_file(class="form-control") }}
+                            {% for error in form.excel_file.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
     <div class="row">
-        <div class="col-md-3 mb-4">
+        <div class="col-md-6 mb-4">
             <div class="card h-100 shadow">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">Variedades</h5>
@@ -23,15 +59,12 @@
                         <a href="{{ url_for('admin.variedades') }}" class="btn btn-outline-primary">
                             <i class="fas fa-list"></i> Ver Listado
                         </a>
-                        <a href="{{ url_for('admin.importar_dataset') }}" class="btn btn-success me-2">
-                            <i class="fas fa-file-import"></i> Importar Variedades
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-3 mb-4">
+        <div class="col-md-6 mb-4">
             <div class="card h-100 shadow">
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">Bloques y Camas</h5>
@@ -39,40 +72,24 @@
                 <div class="card-body">
                     <p class="card-text">Gestión de bloques, camas y lados para ubicación de siembras.</p>
                     <div class="d-grid gap-2">
-                        <a href="/admin/datasets/importar?dataset_type=bloques" class="btn btn-success">
-                            <i class="fas fa-file-import"></i> Importar
+                        <a href="{{ url_for('admin.bloques') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> Ver Listado
                         </a>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div class="col-md-3 mb-4">
-            <div class="card h-100 shadow">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Áreas</h5>
-                </div>
-                <div class="card-body">
-                    <p class="card-text">Gestión de áreas de siembra y sus medidas.</p>
-                    <div class="d-grid gap-2">
-                        <a href="/admin/datasets/importar?dataset_type=areas" class="btn btn-success">
-                            <i class="fas fa-file-import"></i> Importar
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3 mb-4">
+
+        <div class="col-md-4 mb-4">
             <div class="card h-100 shadow">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="card-title mb-0">Densidades</h5>
                 </div>
                 <div class="card-body">
-                    <p class="card-text">Gestión de densidades de siembra para el sistema.</p>
+                    <p class="card-text">Configuración de densidades de siembra (plantas por metro cuadrado).</p>
                     <div class="d-grid gap-2">
-                        <a href="/admin/datasets/importar?dataset_type=densidades" class="btn btn-success">
-                            <i class="fas fa-file-import"></i> Importar
+                        <a href="{{ url_for('admin.densidades') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-cog"></i> Configurar
                         </a>
                     </div>
                 </div>
@@ -89,7 +106,7 @@
                 <div class="col-md-6">
                     <h5><i class="fas fa-info-circle text-primary"></i> Importación de Datasets</h5>
                     <ol>
-                        <li>Seleccione el tipo de datos que desea importar haciendo clic en el botón "Importar" correspondiente.</li>
+                        <li>Seleccione el tipo de datos que desea importar.</li>
                         <li>Cargue un archivo Excel con los datos en el formato especificado.</li>
                         <li>Revise la vista previa de los datos para confirmar que se detectaron correctamente.</li>
                         <li>Asigne columnas si es necesario y configure las opciones de importación.</li>
@@ -104,9 +121,21 @@
                         <li>Primera fila con encabezados</li>
                         <li>Sin celdas combinadas</li>
                         <li>Sin hojas múltiples (usar sólo la primera hoja)</li>
-                        <li>Columnas con nombres específicos según el tipo de datos</li>
                     </ul>
-                    <p>Para más detalles, consulte la sección de ayuda en cada tipo de importación.</p>
+                    <div class="mt-3">
+                        <button class="btn btn-outline-info" type="button" data-bs-toggle="collapse" data-bs-target="#formatosDetails" aria-expanded="false">
+                            Ver detalles de formatos
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="formatosDetails">
+                        <div class="card card-body">
+                            <h6>Formato para Variedades:</h6>
+                            <p>Columnas requeridas: <code>FLOR</code>, <code>COLOR</code>, <code>VARIEDAD</code></p>
+                            
+                            <h6>Formato para Bloques y Camas:</h6>
+                            <p>Columnas requeridas: <code>BLOQUE</code>, <code>CAMA</code>, <code>LADO</code> (opcional)</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

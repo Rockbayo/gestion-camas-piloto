@@ -19,6 +19,57 @@ def index():
 @login_required
 def crear():
     form = SiembraForm()
+    
+    # Si se envía un filtro de flor o color vía AJAX
+    if request.method == 'GET' and request.args.get('filter') == 'true':
+        flor_id = request.args.get('flor_id', type=int)
+        color_id = request.args.get('color_id', type=int)
+        
+        # Construir consulta para filtrar variedades
+        query = Variedad.query
+        
+        if flor_id and flor_id > 0:
+            query = query.join(Variedad.flor_color).join(FlorColor.flor).filter(Flor.flor_id == flor_id)
+        
+        if color_id and color_id > 0:
+            query = query.join(Variedad.flor_color).join(FlorColor.color).filter(Color.color_id == color_id)
+        
+        # Obtener las variedades filtradas
+        variedades = query.order_by(Variedad.variedad).all()
+        
+        # Devolver como JSON para actualizar el select
+        return jsonify([{'id': v.variedad_id, 'text': v.variedad} for v in variedades])
+    
+    # Si se solicita calcular el área vía AJAX
+    if request.method == 'GET' and request.args.get('calculate') == 'true':
+        cantidad_plantas = request.args.get('cantidad_plantas', type=int)
+        densidad_id = request.args.get('densidad_id', type=int)
+        
+        if cantidad_plantas and densidad_id:
+            # Obtener la densidad (plantas por metro cuadrado)
+            densidad = Densidad.query.get(densidad_id)
+            if densidad:
+                # Calcular el área = cantidad de plantas / densidad (plantas/m²)
+                area_calculada = round(cantidad_plantas / densidad.valor, 2)
+                
+                # Buscar si existe un área con este valor aproximado (permitimos un margen de error)
+                area = Area.query.filter(
+                    and_(
+                        Area.area >= area_calculada * 0.95,  # 5% de margen inferior
+                        Area.area <= area_calculada * 1.05   # 5% de margen superior
+                    )
+                ).first()
+                
+                area_id = area.area_id if area else None
+                
+                return jsonify({
+                    'area_calculada': area_calculada,
+                    'area_id': area_id,
+                    'area_nombre': area.siembra if area else None
+                })
+        
+        return jsonify({'error': 'No se pudo calcular el área'})
+    
     if form.validate_on_submit():
         # Buscar o crear bloque_cama_lado
         bloque_cama = BloqueCamaLado.query.filter_by(
@@ -35,16 +86,42 @@ def crear():
             )
             db.session.add(bloque_cama)
             db.session.commit()
+            
+        # Calcular y buscar el área según la cantidad de plantas y densidad
+        densidad = Densidad.query.get(form.densidad_id.data)
+        area_calculada = form.cantidad_plantas.data / densidad.valor if densidad else 0
         
+        # Buscar un área existente o crear una nueva
+        area = None
+        if form.area_id.data:
+            area = Area.query.get(form.area_id.data)
+        
+        if not area:
+            # Crear una descripción para el área
+            area_nombre = f"ÁREA {area_calculada:.2f}m²"
+            
+            # Buscar si ya existe un área con este nombre
+            area = Area.query.filter_by(siembra=area_nombre).first()
+            
+            # Si no existe, crear una nueva
+            if not area:
+                area = Area(siembra=area_nombre, area=area_calculada)
+                db.session.add(area)
+                db.session.flush()  # Obtener el ID
+        
+        # Crear la siembra
         siembra = Siembra(
             bloque_cama_id=bloque_cama.bloque_cama_id,
             variedad_id=form.variedad_id.data,
-            area_id=form.area_id.data,
+            area_id=area.area_id,
             densidad_id=form.densidad_id.data,
             fecha_siembra=form.fecha_siembra.data,
-            usuario_id=current_user.usuario_id)
+            usuario_id=current_user.usuario_id
+        )
+        
         db.session.add(siembra)
         db.session.commit()
+        
         flash('La siembra ha sido registrada exitosamente!', 'success')
         return redirect(url_for('siembras.index'))
     
