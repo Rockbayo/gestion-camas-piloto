@@ -92,8 +92,10 @@ def importar_dataset():
 @bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
 @login_required
 def preview_dataset(dataset_type):
+    # Añade este bloque para verificar permisos
     if not current_user.has_permission('importar_datos'):
-        flash('Acceso no autorizado', 'danger')
+        flash('No tienes permiso para importar datos', 'danger')
+        print(f"Usuario {current_user.username} intentó importar datos sin permiso")
         return redirect(url_for('main.index'))
     
     # Validar datos en sesión
@@ -186,10 +188,11 @@ def preview_dataset(dataset_type):
             # Agregar lado solo si se seleccionó una columna
             if form.lado_column.data:
                 column_mapping[form.lado_column.data] = 'LADO'
-        elif dataset_type == 'causas':
-            column_mapping = {
-                form.causa_column.data: 'CAUSA'
-            }
+            elif dataset_type == 'causas':
+                column_mapping = {
+                    form.causa_column.data: 'CAUSA'
+                }
+                print(f"Mapeo para causas: {column_mapping}")
         
         # Realizar la importación o validación
         success, message, stats = DatasetImporter.process_dataset(
