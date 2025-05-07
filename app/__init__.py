@@ -42,8 +42,8 @@ def create_app(config_class=Config):
     from app.cortes import bp as cortes_bp
     app.register_blueprint(cortes_bp, url_prefix='/cortes')
     
-    from app.perdidas import bp as perdidas_bp
-    app.register_blueprint(perdidas_bp, url_prefix='/perdidas')
+    from app.reportes import reportes as reportes_bp
+    app.register_blueprint(reportes_bp)
     
     # Manejar errores
     register_error_handlers(app)

@@ -1,8 +1,7 @@
 from app import create_app, db
 from app.models import (Usuario, Documento, Bloque, Cama, Lado, 
                         BloqueCamaLado, Flor, Color, FlorColor, 
-                        Variedad, Area, Densidad, Siembra, Corte,
-                        Causa, Perdida)
+                        Variedad, Area, Densidad, Siembra, Corte)
 
 app = create_app()
 

@@ -274,7 +274,7 @@ class Siembra(db.Model):
     
     @hybrid_property
     def total_perdidas(self):
-        return sum(perdida.cantidad for perdida in self.perdidas)
+        return 0  # Ya no hay pérdidas, así que retornamos 0
     
     @hybrid_property
     def dias_ciclo(self):
@@ -319,32 +319,6 @@ class Corte(db.Model):
     def __repr__(self):
         return f'<Corte {self.corte_id}>'
 
-class Causa(db.Model):
-    __tablename__ = 'causas'
-    causa_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    causa = db.Column(db.String(25), nullable=False, unique=True)
-    
-    def __repr__(self):
-        return f'<Causa {self.causa}>'
-
-class Perdida(db.Model):
-    __tablename__ = 'perdidas'
-    perdida_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
-    causa_id = db.Column(db.Integer, db.ForeignKey('causas.causa_id'), nullable=False)
-    cantidad = db.Column(db.Integer, nullable=False)
-    observaciones = db.Column(db.Text)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
-    fecha_registro = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
-    
-    # Relaciones
-    siembra = db.relationship('Siembra', backref='perdidas')
-    causa = db.relationship('Causa', backref='perdidas')
-    usuario = db.relationship('Usuario', backref='perdidas')
-    
-    def __repr__(self):
-        return f'<Perdida {self.perdida_id}>'
-
 # Clase para acceder a las vistas de la base de datos
 class VistaProduccionAcumulada(db.Model):
     __tablename__ = 'vista_produccion_acumulada'
@@ -376,5 +350,3 @@ class VistaProduccionPorDia(db.Model):
     flor = db.Column(db.String(10))
     color = db.Column(db.String(20))
     promedio_tallos = db.Column(db.Float)
-
-    
