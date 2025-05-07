@@ -22,7 +22,7 @@
             <h5 class="card-title mb-0">Formulario de Edición - Siembra #{{ siembra.siembra_id }}</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="">
+            <form method="POST" action="{{ url_for('siembras.editar', id=siembra.siembra_id) }}">
                 {{ form.hidden_tag() }}
                 
                 <div class="row mb-3">
