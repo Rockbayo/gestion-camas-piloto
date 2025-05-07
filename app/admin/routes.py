@@ -11,6 +11,7 @@ from app.models import (
     Densidad, Causa
 )
 from app.utils.dataset_importer import DatasetImporter
+from app.utils.causas_importer import CausasImporter
 import os
 import pandas as pd
 import uuid
@@ -92,7 +93,7 @@ def importar_dataset():
 @bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
 @login_required
 def preview_dataset(dataset_type):
-    # Añade este bloque para verificar permisos
+    # Verificar permisos
     if not current_user.has_permission('importar_datos'):
         flash('No tienes permiso para importar datos', 'danger')
         print(f"Usuario {current_user.username} intentó importar datos sin permiso")
@@ -167,13 +168,19 @@ def preview_dataset(dataset_type):
         # Autodetectar columnas
         if request.method == 'GET':
             causa_col = next((col for col in columns if 'CAUSA' in col.upper()), None)
+            if not causa_col:
+                # Si no encuentra exactamente "CAUSA", buscar términos similares
+                causa_col = next((col for col in columns if 'PERD' in col.upper()), None)
             
             if causa_col:
                 form.causa_column.data = causa_col
+                print(f"Columna de causa detectada: {causa_col}")
     
     if form.validate_on_submit():
         # Preparar mapeo de columnas
         column_mapping = {}
+        
+        # AQUÍ ESTABA EL ERROR: El mapeo para causas estaba dentro de un bloque condicional incorrecto
         if dataset_type == 'variedades':
             column_mapping = {
                 form.flor_column.data: 'FLOR',
@@ -188,11 +195,12 @@ def preview_dataset(dataset_type):
             # Agregar lado solo si se seleccionó una columna
             if form.lado_column.data:
                 column_mapping[form.lado_column.data] = 'LADO'
-            elif dataset_type == 'causas':
-                column_mapping = {
-                    form.causa_column.data: 'CAUSA'
-                }
-                print(f"Mapeo para causas: {column_mapping}")
+        # CORREGIDO: Este bloque estaba mal indentado antes
+        elif dataset_type == 'causas':
+            column_mapping = {
+                form.causa_column.data: 'CAUSA'
+            }
+            print(f"Mapeo para causas: {column_mapping}")
         
         # Realizar la importación o validación
         success, message, stats = DatasetImporter.process_dataset(
@@ -222,7 +230,7 @@ def preview_dataset(dataset_type):
         if success and not form.validate_only.data:
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-            return redirect(url_for('admin.datasets'))
+            return redirect(url_for('admin.causas'))  # Redirigir a la vista específica
             
         # Si el formulario se envía pero hay un error en la validación
         if hasattr(form, 'back') and form.back.data:
@@ -432,3 +440,121 @@ def causas():
                           title='Gestión de Causas de Pérdida',
                           causas=causas_list,
                           causa_filter=causa_filter)
+
+@bp.route('/importar_causas_directo', methods=['GET', 'POST'])
+@login_required
+def importar_causas_directo():
+    """Ruta simplificada para importar causas directamente"""
+    if not current_user.has_permission('importar_datos'):
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        if 'archivo' not in request.files:
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        archivo = request.files['archivo']
+        if archivo.filename == '':
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        if archivo and allowed_file(archivo.filename):
+            # Crear directorio temporal si no existe
+            if not os.path.exists(TEMP_DIR):
+                os.makedirs(TEMP_DIR, exist_ok=True)
+                
+            # Guardar archivo temporalmente con nombre único
+            import uuid
+            temp_path = os.path.join(TEMP_DIR, f"{uuid.uuid4()}_{secure_filename(archivo.filename)}")
+            archivo.save(temp_path)
+            
+            # Intentar importar causas
+            try:
+                print(f"Archivo guardado en: {temp_path}")
+                
+                # Leer archivo para detectar columnas
+                df = pd.read_excel(temp_path)
+                columnas = list(df.columns)
+                column_mapping = {}
+                
+                # Auto-detectar columna de causas
+                for col in columnas:
+                    if "causa" in col.lower():
+                        column_mapping[col] = 'CAUSA'
+                        break
+                
+                # Si no se encontró, usar la primera columna
+                if not column_mapping and columnas:
+                    column_mapping[columnas[0]] = 'CAUSA'
+                
+                # Importar causas
+                success, message, stats = DatasetImporter.import_causas(
+                    temp_path, 
+                    column_mapping=column_mapping, 
+                    validate_only=False, 
+                    skip_first_row=True
+                )
+                
+                if success:
+                    flash(message, 'success')
+                    return redirect(url_for('admin.causas'))
+                else:
+                    flash(message, 'danger')
+                    return render_template('admin/importar_causas_directo.html')
+            
+            except Exception as e:
+                flash(f"Error al importar: {str(e)}", 'danger')
+                return redirect(request.url)
+            finally:
+                # Limpiar archivo temporal
+                if os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except:
+                        pass
+    
+    return render_template('admin/importar_causas_directo.html')
+
+
+
+@bp.route('/causas/importar', methods=['GET', 'POST'])
+@login_required
+def importar_causas():
+    """Ruta para importar causas desde archivo Excel"""
+    # Verificar permisos
+    if not current_user.has_permission('importar_datos'):
+        flash('No tienes permiso para importar datos', 'danger')
+        return redirect(url_for('admin.causas'))
+    
+    if request.method == 'POST':
+        # Verificar archivo
+        if 'archivo' not in request.files:
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        archivo = request.files['archivo']
+        if archivo.filename == '':
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        # Verificar extensión
+        if not archivo.filename.lower().endswith(('.xlsx', '.xls')):
+            flash('Solo se permiten archivos Excel (.xlsx, .xls)', 'danger')
+            return redirect(request.url)
+        
+        # Leer opción de omitir primera fila
+        omitir_primera_fila = 'omitir_primera_fila' in request.form
+        
+        # Importar causas
+        resultados = CausasImporter.importar(archivo, omitir_primera_fila)
+        
+        # Mostrar resultado
+        if resultados['exito']:
+            flash(resultados['mensaje'], 'success')
+            return redirect(url_for('admin.causas'))
+        else:
+            flash(resultados['mensaje'], 'danger')
+    
+    # Mostrar formulario
+    return render_template('admin/importar_causas.html')

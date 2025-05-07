@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Importar Causas de Pérdida</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('admin.causas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Importar Archivo Excel</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="archivo" class="form-label">Archivo Excel</label>
+                    <input type="file" class="form-control" id="archivo" name="archivo" accept=".xlsx,.xls" required>
+                    <div class="form-text">Seleccione un archivo Excel con una columna que contenga las causas.</div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="omitir_primera_fila" name="omitir_primera_fila" checked>
+                    <label class="form-check-label" for="omitir_primera_fila">Omitir primera fila (encabezados)</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload me-1"></i> Importar Causas
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Instrucciones</h5>
+        </div>
+        <div class="card-body">
+            <p>Para importar causas de pérdida, siga estos pasos:</p>
+            <ol>
+                <li>Prepare un archivo Excel con una columna que contenga las causas de pérdida.</li>
+                <li>La columna debe llamarse "Causa" o "Causa de Pérdida" (o algo similar) para ser detectada automáticamente.</li>
+                <li>Si la primera fila contiene encabezados, mantenga marcada la opción "Omitir primera fila".</li>
+                <li>Haga clic en "Importar Causas" para procesar el archivo.</li>
+            </ol>
+            
+            <div class="alert alert-info">
+                <strong>Nota:</strong> Las causas que ya existen en el sistema serán ignoradas durante la importación.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

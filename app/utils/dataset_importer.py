@@ -732,119 +732,97 @@ class DatasetImporter:
     def import_causas(file_path, column_mapping=None, validate_only=False, skip_first_row=True):
         """
         Importa datos de causas de pérdida desde un archivo Excel.
-        
-        Args:
-            - file_path: Ruta del archivo Excel
-            - column_mapping: Diccionario para mapear columnas personalizadas a las requeridas
-            - validate_only: Si es True, sólo valida el dataset sin importar
-            - skip_first_row: Si es True, omite la primera fila (encabezados)
-        
-        Returns:
-            - (bool, str, dict): Tupla con estado, mensaje y estadísticas
         """
         try:
-            # Cargar archivo Excel
+            print(f"Iniciando importación de causas desde: {file_path}")
+            print(f"Mapeo de columnas: {column_mapping}")
+            
+            # Cargar archivo Excel con pandas
             df = pd.read_excel(file_path, header=0 if skip_first_row else None)
             
             # Aplicar mapeo de columnas si se proporciona
             if column_mapping and isinstance(column_mapping, dict):
+                print(f"Aplicando mapeo de columnas: {column_mapping}")
                 df = df.rename(columns=column_mapping)
             
-            # Verificar que las columnas requeridas existan
-            required_columns = ['CAUSA']
+            # Verificar que la columna CAUSA exista
+            if 'CAUSA' not in df.columns:
+                return False, "No se encontró la columna CAUSA en el archivo", {}
             
-            # Si no tiene encabezados, asignar nombres predeterminados
-            if not skip_first_row:
-                if len(df.columns) >= 1:
-                    df.columns = required_columns + [f'COL{i+2}' for i in range(len(df.columns)-1)]
-                else:
-                    return False, "El archivo no tiene columnas", {}
+            # Limpiar datos
+            df = df.dropna(subset=['CAUSA'])
             
-            # Convertir columnas a mayúsculas
-            df.columns = [col.upper() for col in df.columns]
-            
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            
-            if missing_columns:
-                return False, f"Faltan columnas requeridas: {', '.join(missing_columns)}", {}
-            
-            # Verificar valores nulos
-            df = df.dropna(subset=required_columns)
-            
-            # Convertir columnas
+            # Convertir columnas a formato estándar
             df['CAUSA'] = df['CAUSA'].astype(str).str.strip().str.upper()
+            df = df[df['CAUSA'] != '']
             
             # Si es sólo validación, retornar aquí
             if validate_only:
-                return True, "Dataset validado correctamente. Listo para importar.", {
+                return True, f"Dataset validado correctamente. {len(df)} causas listas para importar.", {
                     "total_rows": len(df),
                     "valid_rows": len(df)
                 }
             
-            # Contadores para estadísticas
+            # Estadísticas para el seguimiento
             stats = {
                 'causas_nuevas': 0,
                 'causas_existentes': 0,
                 'errores': 0,
-                'filas_procesadas': 0
+                'filas_procesadas': 0,
+                'error_details': []
             }
-            
-            # Listas para seguimiento de errores
-            error_rows = []
             
             # Procesar cada fila
             for index, row in df.iterrows():
+                stats['filas_procesadas'] += 1
+                
                 try:
-                    stats['filas_procesadas'] += 1
                     causa_nombre = row['CAUSA']
+                    print(f"Procesando causa: '{causa_nombre}'")
                     
-                    # Añadir depuración
-                    print(f"Procesando fila {index+2}: Causa='{causa_nombre}'")
-                    
-                    # Buscar o crear causa
-                    causa = Causa.query.filter_by(causa=causa_nombre).first()
-                    if not causa:
-                        print(f"  -> Creando nueva causa: '{causa_nombre}'")
-                    else:
-                        print(f"  -> Causa ya existente: '{causa_nombre}'")
+                    # Verificar si ya existe (insensible a mayúsculas/minúsculas)
+                    causa = Causa.query.filter(Causa.causa.ilike(causa_nombre)).first()
                     
                     if not causa:
+                        # Crear nueva causa
                         causa = Causa(causa=causa_nombre)
                         db.session.add(causa)
+                        print(f"Nueva causa añadida: '{causa_nombre}'")
                         stats['causas_nuevas'] += 1
                     else:
+                        print(f"Causa existente: '{causa_nombre}'")
                         stats['causas_existentes'] += 1
                     
                 except Exception as e:
-                    error_rows.append({
+                    stats['errores'] += 1
+                    error_detail = {
                         'row': index + 2,
                         'error': str(e)
-                    })
-                    stats['errores'] += 1
-                    continue
+                    }
+                    stats['error_details'].append(error_detail)
+                    print(f"Error en fila {index+2}: {str(e)}")
             
-            # Confirmar cambios si no hay errores graves
+            # Confirmar cambios
             if stats['errores'] == 0 or stats['filas_procesadas'] > stats['errores']:
                 try:
                     db.session.commit()
-                    print(f"Cambios confirmados: {stats['causas_nuevas']} causas nuevas creadas")
+                    print(f"Cambios guardados. Nuevas causas: {stats['causas_nuevas']}")
+                    message = f"Importación completada: {stats['causas_nuevas']} causas nuevas"
+                    if stats['causas_existentes'] > 0:
+                        message += f", {stats['causas_existentes']} ya existentes"
+                    if stats['errores'] > 0:
+                        message += f". Se encontraron {stats['errores']} errores."
+                    
+                    return True, message, stats
                 except Exception as e:
                     db.session.rollback()
-                    print(f"Error al confirmar cambios: {str(e)}")
-                    return False, f"Error al guardar en la base de datos: {str(e)}", stats
+                    print(f"Error al guardar cambios: {str(e)}")
+                    return False, f"Error al guardar los cambios: {str(e)}", stats
             else:
                 db.session.rollback()
-                return False, "Demasiados errores durante la importación. No se importaron datos.", stats
-            
-            # Añadir errores a las estadísticas
-            stats['error_details'] = error_rows
-            
-            message = f"Importación completada: {stats['causas_nuevas']} causas nuevas creadas."
-            
-            if stats['errores'] > 0:
-                message += f" Se encontraron {stats['errores']} errores durante la importación."
-            
-            return True, message, stats
-            
+                return False, "Demasiados errores durante la importación.", stats
+        
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             return False, f"Error general durante la importación: {str(e)}", {}
