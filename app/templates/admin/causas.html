@@ -4,56 +4,66 @@
 <div class="container">
     <h1 class="mb-4">Gestión de Causas de Pérdida</h1>
     
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
-        <div>
-            <a href="{{ url_for('admin.datasets') }}" class="btn btn-success me-2">
-                <i class="fas fa-file-import"></i> Importar Causas
+    <!-- Botones de Acción -->
+    <div class="mb-4">
+        <div class="d-flex flex-wrap gap-2">
+            {% if 'admin.datasets' in view_functions %}
+            <a href="{{ url_for('admin.datasets') }}" class="btn btn-success">
+                <i class="fas fa-file-import me-1"></i> Importar Dataset
             </a>
+            {% endif %}
+            
+            {% if 'admin.crear_causa' in view_functions %}
+            <a href="{{ url_for('admin.crear_causa') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Nueva Causa
+            </a>
+            {% endif %}
         </div>
     </div>
-    
-    <!-- Filtros de búsqueda -->
+
+    <!-- Filtros de Búsqueda -->
     <div class="card shadow mb-4">
         <div class="card-header bg-light">
             <h5 class="card-title mb-0">Filtros</h5>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ url_for('admin.causas') }}">
-                <div class="row">
+                <div class="row g-3 align-items-end">
                     <div class="col-md-8">
-                        <div class="form-group mb-3">
-                            <label for="causa" class="form-label">Buscar por causa</label>
-                            <input type="text" name="causa" id="causa" class="form-control" value="{{ causa_filter }}" placeholder="Buscar...">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="busqueda" name="busqueda" 
+                                   value="{{ request.args.get('busqueda', '') }}" placeholder="Buscar...">
+                            <label for="busqueda">Buscar por nombre de causa</label>
                         </div>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <div class="form-group mb-3 w-100">
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-search"></i> Filtrar
-                            </button>
-                        </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100 h-100">
+                            <i class="fas fa-search me-1"></i> Buscar
+                        </button>
                     </div>
                 </div>
             </form>
         </div>
     </div>
-    
+
+    <!-- Listado de Causas -->
     <div class="card shadow">
-        <div class="card-header bg-light">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Listado de Causas</h5>
+            <span class="badge bg-secondary">{{ causas.total }} causas registradas</span>
         </div>
         <div class="card-body">
             {% if causas.items %}
             <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaCausas">
-                    <thead>
+                <table class="table table-hover table-striped align-middle" id="tablaCausas">
+                    <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Causa de Pérdida</th>
-                            <th>Pérdidas Registradas</th>
+                            <th width="10%">ID</th>
+                            <th width="60%">Nombre de Causa</th>
+                            <th width="20%">Pérdidas Asociadas</th>
+                            {% if 'admin.editar_causa' in view_functions or 'admin.eliminar_causa' in view_functions %}
+                            <th width="10%">Acciones</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -62,30 +72,56 @@
                             <td>{{ causa.causa_id }}</td>
                             <td>{{ causa.causa }}</td>
                             <td>
-                                {% set perdidas_count = causa.perdidas|length %}
-                                <span class="badge {% if perdidas_count > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
-                                    {{ perdidas_count }}
+                                <span class="badge rounded-pill {% if causa.perdidas|length > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ causa.perdidas|length }} registros
                                 </span>
                             </td>
+                            {% if 'admin.editar_causa' in view_functions or 'admin.eliminar_causa' in view_functions %}
+                            <td>
+                                <div class="d-flex gap-1">
+                                    {% if 'admin.editar_causa' in view_functions %}
+                                    <a href="{{ url_for('admin.editar_causa', id=causa.causa_id) }}" 
+                                       class="btn btn-sm btn-outline-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if causa.perdidas|length == 0 and 'admin.eliminar_causa' in view_functions %}
+                                    <form method="POST" action="{{ url_for('admin.eliminar_causa', id=causa.causa_id) }}"
+                                          onsubmit="return confirm('¿Está seguro de eliminar esta causa?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            
+
             <!-- Paginación -->
             <nav aria-label="Paginación" class="mt-4">
                 <ul class="pagination justify-content-center">
-                    <li class="page-item {% if not causas.has_prev %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.causas', page=causas.prev_num, causa=causa_filter) if causas.has_prev else '#' }}">
+                    {% if causas.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.causas', page=causas.prev_num, busqueda=request.args.get('busqueda')) }}">
                             <i class="fas fa-chevron-left"></i> Anterior
                         </a>
                     </li>
-                    
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i> Anterior</span>
+                    </li>
+                    {% endif %}
+
                     {% for page_num in causas.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                         {% if page_num %}
                             <li class="page-item {% if page_num == causas.page %}active{% endif %}">
-                                <a class="page-link" href="{{ url_for('admin.causas', page=page_num, causa=causa_filter) }}">
+                                <a class="page-link" href="{{ url_for('admin.causas', page=page_num, busqueda=request.args.get('busqueda')) }}">
                                     {{ page_num }}
                                 </a>
                             </li>
@@ -95,21 +131,27 @@
                             </li>
                         {% endif %}
                     {% endfor %}
-                    
-                    <li class="page-item {% if not causas.has_next %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('admin.causas', page=causas.next_num, causa=causa_filter) if causas.has_next else '#' }}">
+
+                    {% if causas.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.causas', page=causas.next_num, busqueda=request.args.get('busqueda')) }}">
                             Siguiente <i class="fas fa-chevron-right"></i>
                         </a>
                     </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Siguiente <i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
                 </ul>
             </nav>
-            
-            <div class="mt-3 text-center">
-                <p>Mostrando {{ causas.items|length }} de {{ causas.total }} causas</p>
-            </div>
             {% else %}
-            <div class="alert alert-info">
-                No hay causas registradas que coincidan con los filtros. <a href="{{ url_for('admin.datasets') }}" class="alert-link">Importar causas</a>.
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>
+                No se encontraron causas que coincidan con los criterios de búsqueda.
+                {% if request.args.get('busqueda') %}
+                <a href="{{ url_for('admin.causas') }}" class="alert-link ms-2">Mostrar todas</a>
+                {% endif %}
             </div>
             {% endif %}
         </div>
@@ -120,17 +162,28 @@
 {% block scripts %}
 <script>
     $(document).ready(function() {
-        // Inicializar tabla solo si no está usando paginación del servidor
-        if ($('#tablaCausas').length > 0 && {{ causas.total }} <= {{ causas.per_page }}) {
+        // Inicialización de DataTables para client-side processing cuando hay pocos registros
+        if ($('#tablaCausas').length && {{ causas.total }} <= 25) {
             $('#tablaCausas').DataTable({
+                dom: '<"top"f>rt<"bottom"lip><"clear">',
                 language: {
-                    url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
                 },
-                order: [[0, 'asc']],
-                paging: false,
-                info: false
+                columnDefs: [
+                    { orderable: false, targets: [3] }, // Columna de acciones no ordenable
+                    { searchable: false, targets: [0, 2, 3] } // Columnas ID, Pérdidas y Acciones no buscables
+                ],
+                initComplete: function() {
+                    $('.dataTables_filter input').addClass('form-control').attr('placeholder', 'Buscar...');
+                }
             });
         }
+        
+        // Tooltips para botones
+        $('[title]').tooltip({
+            trigger: 'hover',
+            placement: 'top'
+        });
     });
 </script>
 {% endblock %}

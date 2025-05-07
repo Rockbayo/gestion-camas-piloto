@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Importar Causas Directamente</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('admin.causas') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Seleccionar archivo Excel</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="archivo" class="form-label">Archivo Excel (.xlsx, .xls)</label>
+                    <input type="file" class="form-control" id="archivo" name="archivo" accept=".xlsx,.xls">
+                    <div class="form-text">El archivo debe contener una columna llamada "Causa" o similar.</div>
+                </div>
+                <button type="submit" class="btn btn-primary">Importar</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Instrucciones</h5>
+        </div>
+        <div class="card-body">
+            <p>Esta es una interfaz simplificada para importar causas de pérdida. Para usar la interfaz completa de importación, utilice el módulo de Datasets.</p>
+            <ol>
+                <li>Seleccione un archivo Excel que contenga las causas de pérdida</li>
+                <li>El sistema intentará detectar automáticamente la columna con las causas</li>
+                <li>Si se importan correctamente, será redirigido a la lista de causas</li>
+            </ol>
+        </div>
+    </div>
+</div>
+{% endblock %}

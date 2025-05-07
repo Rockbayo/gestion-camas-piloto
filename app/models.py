@@ -332,11 +332,10 @@ class Perdida(db.Model):
     perdida_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
     causa_id = db.Column(db.Integer, db.ForeignKey('causas.causa_id'), nullable=False)
-    # fecha_perdida = db.Column(db.Date, nullable=False)  # Campo que ya no usaremos
     cantidad = db.Column(db.Integer, nullable=False)
     observaciones = db.Column(db.Text)
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
-    fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_registro = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     
     # Relaciones
     siembra = db.relationship('Siembra', backref='perdidas')

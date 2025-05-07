@@ -6,14 +6,14 @@ import pandas as pd
 import os
 import json
 from flask import current_app, session
+from app import db  # Import the database object
 from werkzeug.utils import secure_filename
 import uuid
 
-from app import db
 from app.models import (
     Flor, Color, FlorColor, Variedad,
     Bloque, Cama, Lado, BloqueCamaLado,
-    Area, Densidad
+    Area, Densidad, Causa
 )
 
 # Configuración de directorios
@@ -130,7 +130,17 @@ class DatasetImporter:
             'causas': DatasetImporter.import_causas
         }
         
+        processors = {
+        'variedades': DatasetImporter.import_variedades,
+        'bloques': DatasetImporter.import_bloques_camas,
+        'areas': DatasetImporter.import_areas,
+        'densidades': DatasetImporter.import_densidades,
+        'causas': DatasetImporter.import_causas
+    }
+    
         if dataset_type in processors:
+            if dataset_type == 'causas':
+                print(f"Procesando dataset de causas con mapeo: {column_mapping}")
             return processors[dataset_type](
                 file_path, column_mapping, validate_only, skip_first_row
             )
@@ -280,11 +290,17 @@ class DatasetImporter:
             
             # Confirmar cambios si no hay errores graves
             if stats['errores'] == 0 or stats['filas_procesadas'] > stats['errores']:
-                db.session.commit()
+                try:
+                    db.session.commit()
+                    print(f"Cambios confirmados: {stats['causas_nuevas']} causas nuevas creadas")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Error al confirmar cambios: {str(e)}")
+                    return False, f"Error al guardar en la base de datos: {str(e)}", stats
             else:
                 db.session.rollback()
                 return False, "Demasiados errores durante la importación. No se importaron datos.", stats
-            
+                        
             # Añadir errores a las estadísticas
             stats['error_details'] = error_rows
             
@@ -782,9 +798,16 @@ class DatasetImporter:
                     stats['filas_procesadas'] += 1
                     causa_nombre = row['CAUSA']
                     
+                    # Añadir depuración
+                    print(f"Procesando fila {index+2}: Causa='{causa_nombre}'")
+                    
                     # Buscar o crear causa
-                    from app.models import Causa
                     causa = Causa.query.filter_by(causa=causa_nombre).first()
+                    if not causa:
+                        print(f"  -> Creando nueva causa: '{causa_nombre}'")
+                    else:
+                        print(f"  -> Causa ya existente: '{causa_nombre}'")
+                    
                     if not causa:
                         causa = Causa(causa=causa_nombre)
                         db.session.add(causa)
@@ -802,7 +825,13 @@ class DatasetImporter:
             
             # Confirmar cambios si no hay errores graves
             if stats['errores'] == 0 or stats['filas_procesadas'] > stats['errores']:
-                db.session.commit()
+                try:
+                    db.session.commit()
+                    print(f"Cambios confirmados: {stats['causas_nuevas']} causas nuevas creadas")
+                except Exception as e:
+                    db.session.rollback()
+                    print(f"Error al confirmar cambios: {str(e)}")
+                    return False, f"Error al guardar en la base de datos: {str(e)}", stats
             else:
                 db.session.rollback()
                 return False, "Demasiados errores durante la importación. No se importaron datos.", stats
@@ -816,7 +845,6 @@ class DatasetImporter:
                 message += f" Se encontraron {stats['errores']} errores durante la importación."
             
             return True, message, stats
-        
+            
         except Exception as e:
-            db.session.rollback()
-            return False, f"Error durante la importación: {str(e)}", {}
+            return False, f"Error general durante la importación: {str(e)}", {}

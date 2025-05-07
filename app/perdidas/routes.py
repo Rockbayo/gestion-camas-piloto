@@ -11,8 +11,8 @@ from datetime import datetime
 @login_required
 def index():
     page = request.args.get('page', 1, type=int)
-    perdidas_list = Perdida.query.order_by(Perdida.fecha_perdida.desc()).paginate(
-        page=page, per_page=10)
+    perdidas_list = Perdida.query.order_by(Perdida.fecha_registro.desc()).paginate(
+    page=page, per_page=10)
     return render_template('perdidas/index.html', title='Pérdidas', perdidas=perdidas_list)
 
 # En app/perdidas/routes.py
