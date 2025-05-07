@@ -1,11 +1,12 @@
 # Rutas para la gestión de siembras
-from flask import render_template, flash, redirect, url_for, request
+from flask import render_template, flash, redirect, url_for, request, jsonify
 from flask_login import login_required, current_user
 from app import db
 from app.siembras import bp
 from app.siembras.forms import SiembraForm, InicioCorteForm
-from app.models import Siembra, BloqueCamaLado, Bloque, Cama, Lado
+from app.models import Siembra, BloqueCamaLado, Variedad, Area, Densidad, Flor, Color, FlorColor
 from datetime import datetime
+from sqlalchemy import and_
 
 @bp.route('/')
 @login_required
