@@ -8,7 +8,7 @@ from app.admin.forms import (
 )
 from app.models import (
     Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
-    Densidad
+    Densidad, Siembra
 )
 from app.utils.dataset_importer import DatasetImporter
 import os
@@ -395,3 +395,40 @@ def editar_densidad():
     else:
         flash('Error en el formulario. Por favor, revise los campos.', 'danger')
         return redirect(url_for('admin.densidades'))
+    
+
+@bp.route('/densidades/eliminar', methods=['POST'])
+@login_required
+def eliminar_densidad():
+    """Ruta para eliminar una densidad existente"""
+    if not current_user.has_permission('importar_datos'):
+        flash('Acceso no autorizado', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    densidad_id = request.form.get('densidad_id', type=int)
+    if not densidad_id:
+        flash('Densidad no especificada.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    # Buscar la densidad
+    densidad = Densidad.query.get(densidad_id)
+    if not densidad:
+        flash('Densidad no encontrada.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    # Verificar si hay siembras que usan esta densidad
+    siembras_asociadas = Siembra.query.filter_by(densidad_id=densidad_id).count()
+    if siembras_asociadas > 0:
+        flash(f'No se puede eliminar la densidad "{densidad.densidad}" porque está siendo utilizada en {siembras_asociadas} siembras.', 'danger')
+        return redirect(url_for('admin.densidades'))
+
+    try:
+        nombre = densidad.densidad  # Guardar el nombre para usarlo en el mensaje
+        db.session.delete(densidad)
+        db.session.commit()
+        flash(f'Densidad "{nombre}" eliminada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al eliminar la densidad: {str(e)}', 'danger')
+    
+    return redirect(url_for('admin.densidades'))

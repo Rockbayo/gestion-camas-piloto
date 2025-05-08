@@ -212,7 +212,6 @@ def editar(id):
             form.cantidad_plantas.data = 0
     
     return render_template('siembras/editar.html', title='Editar Siembra', form=form, siembra=siembra)
-
 @bp.route('/inicio-corte/<int:id>', methods=['GET', 'POST'])
 @login_required
 def inicio_corte(id):
@@ -269,24 +268,3 @@ def detalles(id):
     siembra = Siembra.query.get_or_404(id)
     return render_template('siembras/detalles.html', title='Detalles de Siembra', siembra=siembra)
 
-# En app/admin/routes.py
-@bp.route('/causas', methods=['GET'])
-@login_required
-def causas():
-    """Vista para mostrar listado de causas de pérdida importadas"""
-    page = request.args.get('page', 1, type=int)
-    causa_filter = request.args.get('causa', '')
-    
-    # Consulta de causas con posible filtro
-    query = Causa.query
-    
-    if causa_filter:
-        query = query.filter(Causa.causa.ilike(f'%{causa_filter}%'))
-    
-    causas_list = query.order_by(Causa.causa).paginate(
-        page=page, per_page=20)
-    
-    return render_template('admin/causas.html', 
-                          title='Gestión de Causas de Pérdida',
-                          causas=causas_list,
-                          causa_filter=causa_filter)

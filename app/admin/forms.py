@@ -12,8 +12,7 @@ class ImportDatasetForm(FlaskForm):
     ])
     dataset_type = SelectField('Tipo de Datos', choices=[
         ('variedades', 'Variedades'),
-        ('bloques', 'Bloques y Camas'),
-        ('causas', 'Causas de Pérdida')
+        ('bloques', 'Bloques y Camas')
     ], validators=[DataRequired()])
     submit = SubmitField('Cargar archivo')
 
@@ -43,6 +42,3 @@ class DensidadForm(FlaskForm):
     valor = FloatField('Valor (plantas/m²)', validators=[DataRequired(), NumberRange(min=0.1)])
     submit = SubmitField('Guardar')
 
-class MappingCausasForm(MappingForm):
-    """Formulario para mapear columnas del Excel de causas"""
-    causa_column = SelectField('Columna para Causa', choices=[('', 'Seleccione...')], validators=[DataRequired()])

@@ -3,16 +3,12 @@ Módulo unificado para la importación de datasets en la aplicación.
 Actúa como orquestador entre los diferentes importadores específicos.
 """
 import os
-from werkzeug.utils import secure_filename
-import uuid
 from flask import session
 
 # Importar los importadores específicos
 from app.utils.base_importer import BaseImporter
 from app.utils.variedades_importer import VariedadesImporter
 from app.utils.bloques_importer import BloquesImporter
-from app.utils.areas_importer import AreasImporter
-from app.utils.densidades_importer import DensidadesImporter
 
 # Configurar directorio temporal
 TEMP_DIR = os.path.join('uploads', 'temp')
@@ -40,4 +36,29 @@ class DatasetImporter:
         Procesa un dataset según su tipo, delegando a los importadores específicos.
         
         Args:
-            - file_
+            - file_path: Ruta del archivo Excel
+            - dataset_type: Tipo de dataset ('variedades', 'bloques')
+            - column_mapping: Diccionario para mapear columnas personalizadas
+            - validate_only: Si es True, sólo valida el dataset sin importar
+            - skip_first_row: Si es True, omite la primera fila (encabezados)
+            
+        Returns:
+            - (bool, str, dict): Tupla con estado, mensaje y estadísticas
+        """
+        # Mapeo de tipos de dataset a los métodos específicos de importación
+        importers = {
+            'variedades': VariedadesImporter.import_variedades,
+            'bloques': BloquesImporter.import_bloques_camas
+        }
+        
+        # Verificar si el tipo de dataset está soportado
+        if dataset_type not in importers:
+            return False, f"Tipo de dataset no soportado: {dataset_type}", {}
+        
+        # Delegar la importación al método correspondiente
+        return importers[dataset_type](
+            file_path, 
+            column_mapping, 
+            validate_only, 
+            skip_first_row
+        )

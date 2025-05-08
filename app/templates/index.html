@@ -4,8 +4,8 @@
 {% block content %}
 <div class="container">
     <div class="jumbotron text-center bg-light py-5 rounded-3 shadow-sm">
-        <h1 class="display-4">Bienvenido al Sistema de Gestión de Camas</h1>
-        <p class="lead">Sistema integrado para administrar siembras, cortes y pérdidas en el cultivo.</p>
+        <h1 class="display-4">Bienvenido al Sistema de Gestión de Camas Piloto</h1>
+        <p class="lead">Sistema de Administracion para el seguimiento de Produccion de Camas Piloto.</p>
         <hr class="my-4">
         <div class="d-flex justify-content-center gap-3">
             <a class="btn btn-primary btn-lg" href="{{ url_for('main.dashboard') }}" role="button">
@@ -36,14 +36,6 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-exclamation-triangle text-danger"></i> Pérdidas</h5>
-                    <p class="card-text">Lleva un registro de las pérdidas por diversas causas para mejorar la producción.</p>
-                    <a href="{{ url_for('perdidas.index') }}" class="btn btn-outline-primary">Ver Pérdidas</a>
-                </div>
-            </div>
         </div>
     </div>
 </div>
