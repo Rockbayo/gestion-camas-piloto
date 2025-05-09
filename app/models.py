@@ -314,6 +314,23 @@ class Corte(db.Model):
     
     def __repr__(self):
         return f'<Corte {self.corte_id}>'
+    
+    # En app/models.py, en la clase Corte
+    @hybrid_property
+    def indice_sobre_total(self):
+        """Calcula el índice (porcentaje) de este corte sobre el total de plantas sembradas"""
+        try:
+            # Obtener el total de plantas sembradas
+            total_plantas = 0
+            if self.siembra.area and self.siembra.densidad:
+                total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+            
+            # Calcular el índice (porcentaje)
+            if total_plantas > 0:
+                return round((self.cantidad_tallos / total_plantas) * 100, 2)
+            return 0
+        except:
+            return 0
 
 # Clase para acceder a las vistas de la base de datos
 class VistaProduccionAcumulada(db.Model):

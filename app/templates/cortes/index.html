@@ -1,12 +1,3 @@
-# Plantilla para la vista de cortes
-
-{% set title = "Cortes" %}
-{% set description = "Listado de cortes registrados en el sistema." %}
-{% set keywords = "cortes, siembras, gestión agrícola" %}
-
-{% block title %}{{ title }}{% endblock %}
-{% block description %}{{ description }}{% endblock %}
-{% block keywords %}{{ keywords }}{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
@@ -47,7 +38,7 @@
                             <td>{{ corte.siembra.bloque_cama.ubicacion_completa }}</td>
                             <td>{{ corte.siembra.variedad.variedad }}</td>
                             <td>{{ corte.num_corte }}</td>
-                            <td>{{ corte.fecha_corte.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ corte.fecha_corte|dateformat }}</td>
                             <td>{{ corte.cantidad_tallos }}</td>
                             <td>
                                 <div class="btn-group">

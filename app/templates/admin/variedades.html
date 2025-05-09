@@ -93,6 +93,9 @@
                                     <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#detalleModal{{ variedad.variedad_id }}">
                                         <i class="fas fa-eye"></i>
                                     </button>
+                                    <a href="{{ url_for('reportes.curva_produccion', variedad_id=variedad.variedad_id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Ver Curva de Producción">
+                                        <i class="fas fa-chart-line"></i>
+                                    </a>
                                 </div>
                                 
                                 <!-- Modal de Detalles -->

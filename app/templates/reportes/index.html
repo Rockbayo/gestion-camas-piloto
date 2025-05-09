@@ -2,53 +2,103 @@
 
 {% block content %}
 <div class="container">
-    <h2>Reportes</h2>
+    <h2 class="mb-4">Reportes y Análisis</h2>
     
     <div class="row mt-4">
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Producción por Variedad</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Producción por Variedad</h5>
-                    <p class="card-text">Ver estadísticas de producción por variedad de flor.</p>
-                    <a href="{{ url_for('reportes.produccion_por_variedad') }}" class="btn btn-primary">Ver Reporte</a>
+                    <p class="card-text">Analiza la producción total de tallos por cada variedad de flor cultivada.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('reportes.produccion_por_variedad') }}" class="btn btn-primary">
+                            <i class="fas fa-chart-pie me-2"></i>Ver Reporte
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Producción por Bloque</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Producción por Bloque</h5>
-                    <p class="card-text">Ver estadísticas de producción por bloque.</p>
-                    <a href="{{ url_for('reportes.produccion_por_bloque') }}" class="btn btn-primary">Ver Reporte</a>
+                    <p class="card-text">Compara la producción de tallos por bloque para identificar áreas de mayor rendimiento.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('reportes.produccion_por_bloque') }}" class="btn btn-success">
+                            <i class="fas fa-th me-2"></i>Ver Reporte
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="col-md-4">
-            <div class="card">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Días de Producción</h5>
+                </div>
                 <div class="card-body">
-                    <h5 class="card-title">Días de Producción</h5>
-                    <p class="card-text">Análisis de días desde siembra hasta corte por variedad.</p>
-                    <a href="{{ url_for('reportes.dias_produccion') }}" class="btn btn-primary">Ver Reporte</a>
+                    <p class="card-text">Analiza el ciclo de producción desde la siembra hasta el corte por cada variedad.</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('reportes.dias_produccion') }}" class="btn btn-info">
+                            <i class="fas fa-calendar-alt me-2"></i>Ver Reporte
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h4 class="card-title">Exportar Datos</h4>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('reportes.exportar_datos', tipo='siembras') }}" class="btn btn-success">
-                            <i class="bi bi-file-excel me-2"></i>Exportar Siembras a Excel
+      <div class="card mt-4 shadow">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">Curvas de Producción por Variedad</h5>
+        </div>
+        <div class="card-body">
+            <p>Seleccione una variedad para ver su curva de producción basada en el índice promedio por día desde la siembra:</p>
+            
+            <div class="row">
+                {% set variedades = variedades if variedades is defined else [] %}
+                {% if variedades %}
+                    {% for variedad in variedades %}
+                    <div class="col-md-3 mb-3">
+                        <a href="{{ url_for('reportes.curva_produccion', variedad_id=variedad.variedad_id) }}" class="btn btn-outline-warning w-100">
+                            {{ variedad.variedad }}
                         </a>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No hay variedades disponibles para mostrar curvas de producción.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="card-title mb-0">Exportar Datos</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-grid">
+                        <a href="{{ url_for('reportes.exportar_datos', tipo='siembras') }}" class="btn btn-success mb-2">
+                            <i class="fas fa-file-excel me-2"></i>Exportar Siembras a Excel
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-grid">
                         <a href="{{ url_for('reportes.exportar_datos', tipo='cortes') }}" class="btn btn-success">
-                            <i class="bi bi-file-excel me-2"></i>Exportar Cortes a Excel
+                            <i class="fas fa-file-excel me-2"></i>Exportar Cortes a Excel
                         </a>
                     </div>
                 </div>

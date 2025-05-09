@@ -1,5 +1,3 @@
-
-<!--app/templates/dashboard.html--><!-- Plantilla para el dashboard -->
 {% extends "base.html" %}
 
 {% block content %}
@@ -74,7 +72,7 @@
                         <a href="{{ url_for('siembras.detalles', id=corte.siembra_id) }}" class="list-group-item list-group-item-action">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1">{{ corte.siembra.variedad.variedad }}</h6>
-                                <small>{{ corte.fecha_corte.strftime('%d-%m-%Y') }}</small>
+                                <small>{{ corte.fecha_corte|dateformat }}</small>
                             </div>
                             <p class="mb-1">Corte #{{ corte.num_corte }} - {{ corte.cantidad_tallos }} tallos</p>
                             <small>{{ corte.siembra.bloque_cama.ubicacion_completa }}</small>
@@ -116,7 +114,7 @@
                             <td>{{ siembra.siembra_id }}</td>
                             <td>{{ siembra.bloque_cama.ubicacion_completa }}</td>
                             <td>{{ siembra.variedad.variedad }}</td>
-                            <td>{{ siembra.fecha_siembra.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ siembra.fecha_siembra|dateformat }}</td>
                             <td>
                                 <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">
                                     {{ siembra.estado }}

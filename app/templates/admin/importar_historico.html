@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Importar Datos Históricos</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('admin.datasets') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Subir archivo histórico</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Esta herramienta permite importar datos históricos de siembras y cortes desde un archivo Excel con el formato específico. El proceso puede tomar varios minutos dependiendo del tamaño del archivo.
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="excel_file" class="form-label">Archivo Excel</label>
+                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Importar Datos
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Formato Esperado</h5>
+        </div>
+        <div class="card-body">
+            <p>El archivo debe contener las siguientes columnas:</p>
+            <ul>
+                <li><strong>BLOQUE:</strong> Identificador del bloque</li>
+                <li><strong>CAMA:</strong> Identificador de la cama con el lado (ej: "55A")</li>
+                <li><strong>Area:</strong> Área en metros cuadrados</li>
+                <li><strong>FLOR, COLOR, VARIEDAD:</strong> Información de la variedad</li>
+                <li><strong>FECHA SIEMBRA:</strong> Fecha de siembra (formato fecha)</li>
+                <li><strong>FECHA INICIO CORTE:</strong> Fecha del primer corte</li>
+                <li><strong>FECHA FIN CORTE:</strong> Fecha del último corte</li>
+                <li><strong>PLANTAS:</strong> Número de plantas sembradas</li>
+                <li><strong>DENSIDAD:</strong> Plantas por metro cuadrado</li>
+                <li><strong>Columnas 1-15:</strong> Tallos por cada corte</li>
+                <li><strong>TALLOS:</strong> Total de tallos cortados</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

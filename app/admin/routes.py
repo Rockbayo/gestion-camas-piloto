@@ -432,3 +432,50 @@ def eliminar_densidad():
         flash(f'Error al eliminar la densidad: {str(e)}', 'danger')
     
     return redirect(url_for('admin.densidades'))
+
+@bp.route('/importar-historico', methods=['GET', 'POST'])
+@login_required
+def importar_historico():
+    """Vista para importar datos históricos desde un archivo Excel"""
+    # Verificar permisos
+    if not current_user.has_permission('importar_datos'):
+        flash('No tienes permiso para importar datos', 'danger')
+        return redirect(url_for('main.index'))
+    
+    if request.method == 'POST':
+        # Verificar si se subió un archivo
+        if 'excel_file' not in request.files:
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        file = request.files['excel_file']
+        if file.filename == '':
+            flash('No se seleccionó ningún archivo', 'danger')
+            return redirect(request.url)
+        
+        if file and file.filename.endswith(('.xlsx', '.xls')):
+            # Guardar el archivo temporalmente
+            filename = secure_filename(file.filename)
+            temp_path = os.path.join(TEMP_DIR, f"{uuid.uuid4()}_{filename}")
+            file.save(temp_path)
+            
+            try:
+                # Importar datos históricos usando la utilidad
+                from app.utils.importar_historico import importar_historico
+                importar_historico(temp_path)
+                
+                flash('Datos históricos importados correctamente', 'success')
+                return redirect(url_for('admin.datasets'))
+                
+            except Exception as e:
+                flash(f'Error durante la importación: {str(e)}', 'danger')
+                return redirect(request.url)
+            finally:
+                # Eliminar archivo temporal
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+        else:
+            flash('Formato de archivo no permitido. Use Excel (.xlsx, .xls)', 'danger')
+            return redirect(request.url)
+    
+    return render_template('admin/importar_historico.html', title='Importar Datos Históricos')

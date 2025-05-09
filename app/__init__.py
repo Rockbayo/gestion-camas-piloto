@@ -1,3 +1,4 @@
+# app/__init__.py
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -16,55 +17,7 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
 csrf = CSRFProtect()
 
-def create_app(config_class=Config):
-    app = Flask(__name__)
-    app.config.from_object(config_class)
-    
-    # Inicializar extensiones
-    db.init_app(app)
-    migrate.init_app(app, db)
-    login_manager.init_app(app)
-    csrf.init_app(app)
-    
-    # Registrar blueprints - las rutas se importan automáticamente en __init__.py
-    from app.main import bp as main_bp
-    app.register_blueprint(main_bp)
-    
-    from app.auth import bp as auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    
-    from app.admin import bp as admin_bp
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    
-    from app.siembras import bp as siembras_bp
-    app.register_blueprint(siembras_bp, url_prefix='/siembras')
-    
-    from app.cortes import bp as cortes_bp
-    app.register_blueprint(cortes_bp, url_prefix='/cortes')
-    
-    from app.reportes import reportes as reportes_bp
-    app.register_blueprint(reportes_bp)
-    
-    # Manejar errores
-    register_error_handlers(app)
-    
-    # Configurar comandos CLI
-    register_cli_commands(app)
-    
-    # Configurar logging...
-    if not app.debug and not app.testing:
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/cpc.log', maxBytes=10240, backupCount=10)
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(logging.INFO)
-        app.logger.info('CPC startup')
-    
-    return app
-
+# Definir funciones auxiliares antes de create_app
 def register_error_handlers(app):
     @app.errorhandler(404)
     def page_not_found(e):
@@ -100,3 +53,71 @@ def register_cli_commands(app):
             print("Base de datos inicializada con usuario admin")
         else:
             print("Ya existen usuarios en la base de datos")
+    
+    @app.cli.command("importar-historico")
+    def importar_historico_cmd():
+        """Importa datos históricos desde un archivo Excel."""
+        import os
+        from app.utils.importar_historico import importar_historico
+        
+        archivo = input("Ruta del archivo Excel: ")
+        if not os.path.exists(archivo):
+            print(f"El archivo {archivo} no existe.")
+            return
+        
+        print(f"Importando datos desde {archivo}...")
+        importar_historico(archivo)
+            
+    
+def create_app(config_class=Config):
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    
+    # Inicializar extensiones
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    
+    # Registrar blueprints - las rutas se importan automáticamente en __init__.py
+    from app.main import bp as main_bp
+    app.register_blueprint(main_bp)
+    
+    from app.auth import bp as auth_bp
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    
+    from app.admin import bp as admin_bp
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    
+    from app.siembras import bp as siembras_bp
+    app.register_blueprint(siembras_bp, url_prefix='/siembras')
+    
+    from app.cortes import bp as cortes_bp
+    app.register_blueprint(cortes_bp, url_prefix='/cortes')
+    
+    from app.reportes import reportes as reportes_bp
+    app.register_blueprint(reportes_bp)
+    
+    # Añadir filtros personalizados para fechas
+    from app.utils.date_filter import add_date_filter
+    add_date_filter(app)
+    
+    # Manejar errores
+    register_error_handlers(app)
+    
+    # Configurar comandos CLI
+    register_cli_commands(app)
+    
+    # Configurar logging...
+    if not app.debug and not app.testing:
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        file_handler = RotatingFileHandler('logs/cpc.log', maxBytes=10240, backupCount=10)
+        file_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('CPC startup')
+    
+    return app
