@@ -20,6 +20,9 @@
             </div>
             
             <form method="POST" enctype="multipart/form-data">
+                <!-- Añadir el token CSRF aquí -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
                 <div class="mb-3">
                     <label for="excel_file" class="form-label">Archivo Excel</label>
                     <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
