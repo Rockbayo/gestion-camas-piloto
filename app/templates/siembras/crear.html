@@ -183,30 +183,50 @@
                 .catch(error => console.error('Error al filtrar variedades:', error));
         }
         
-        // Función para calcular el área según cantidad de plantas y densidad
+        /// Función para calcular el área según cantidad de plantas y densidad
         function calcularArea() {
-            const cantidadPlantas = cantidadPlantasInput.value;
-            const densidadId = densidadSelect.value;
+            const cantidadPlantas = document.getElementById('cantidad_plantas').value;
+            const densidadId = document.getElementById('densidad_id').value;
+            const areaCalculadaInput = document.getElementById('area_calculada');
+            const areaIdInput = document.getElementById('area_id');
+            const areaAsignadaInput = document.getElementById('area_asignada');
+            
+            // Reset values
+            areaCalculadaInput.value = '';
+            areaIdInput.value = '';
+            areaAsignadaInput.value = '';
             
             if (cantidadPlantas && densidadId) {
-                fetch(`{{ url_for('siembras.crear') }}?calculate=true&cantidad_plantas=${cantidadPlantas}&densidad_id=${densidadId}`)
+                // Obtener el texto de la densidad seleccionada para mostrar en los logs
+                const densidadText = document.getElementById('densidad_id').options[document.getElementById('densidad_id').selectedIndex].text;
+                console.log(`Calculando área para ${cantidadPlantas} plantas con densidad ID: ${densidadId} (${densidadText})`);
+                
+                // Realizar petición AJAX para obtener el cálculo del servidor
+                fetch(`${window.location.pathname}?calculate=true&cantidad_plantas=${cantidadPlantas}&densidad_id=${densidadId}`)
                     .then(response => response.json())
                     .then(data => {
+                        console.log('Respuesta del servidor:', data);
                         if (data.error) {
                             areaCalculadaInput.value = 'Error';
+                            console.error('Error en cálculo:', data.error);
+                            alert('Error al calcular el área: ' + data.error);
                         } else {
                             areaCalculadaInput.value = data.area_calculada;
                             areaIdInput.value = data.area_id || '';
                             areaAsignadaInput.value = data.area_nombre || `ÁREA ${data.area_calculada}m²`;
                         }
                     })
-                    .catch(error => console.error('Error al calcular área:', error));
+                    .catch(error => {
+                        console.error('Error al calcular área:', error);
+                        areaCalculadaInput.value = 'Error';
+                        alert('Error en la comunicación con el servidor');
+                    });
             }
         }
-        
-        // Escuchar cambios en los selects de flor y color
-        florSelect.addEventListener('change', filtrarVariedades);
-        colorSelect.addEventListener('change', filtrarVariedades);
+
+// Escuchar cambios en cantidad de plantas y densidad
+document.getElementById('cantidad_plantas').addEventListener('input', calcularArea);
+document.getElementById('densidad_id').addEventListener('change', calcularArea);
         
         // Escuchar cambios en cantidad de plantas y densidad
         cantidadPlantasInput.addEventListener('input', calcularArea);

@@ -1,4 +1,9 @@
-#Rutas de la aplicación Flask para el módulo principal
+# Primero configurar el backend antes de importar pyplot
+import matplotlib
+matplotlib.use('Agg')  # Configurar backend no interactivo
+
+
+# Importar las librerías necesarias
 from flask import render_template, flash, redirect, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc

@@ -1,8 +1,8 @@
 # app/siembras/forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, DateField, SubmitField, IntegerField, FloatField, HiddenField
+from wtforms import SelectField, DateField, SubmitField, IntegerField, FloatField, HiddenField
 from wtforms.validators import DataRequired, ValidationError, NumberRange, Optional
-from app.models import Bloque, Cama, Lado, Variedad, Area, Densidad, Flor, Color, FlorColor
+from app.models import Bloque, Cama, Lado, Variedad, Densidad, Flor, Color
 from sqlalchemy import asc
 from datetime import datetime
 
