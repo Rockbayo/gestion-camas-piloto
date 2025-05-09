@@ -315,22 +315,118 @@ class Corte(db.Model):
     def __repr__(self):
         return f'<Corte {self.corte_id}>'
     
-    # En app/models.py, en la clase Corte
-    @hybrid_property
-    def indice_sobre_total(self):
-        """Calcula el índice (porcentaje) de este corte sobre el total de plantas sembradas"""
-        try:
-            # Obtener el total de plantas sembradas
-            total_plantas = 0
-            if self.siembra.area and self.siembra.densidad:
-                total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+
+@hybrid_property
+def indice_sobre_total(self):
+    """Calcula el índice (porcentaje) de este corte sobre el total de plantas sembradas"""
+    try:
+        # Obtener el total de plantas sembradas
+        total_plantas = 0
+        if self.siembra.area and self.siembra.densidad:
+            total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+        
+        # Calcular el índice (porcentaje)
+        if total_plantas > 0:
+            return round((self.cantidad_tallos / total_plantas) * 100, 2)
+        return 0
+    except Exception as e:
+        print(f"Error al calcular índice: {str(e)}")
+        return 0
+
+# Añadir una nueva propiedad para calcular el índice acumulado
+@hybrid_property
+def indice_acumulado(self):
+    """Calcula el índice acumulado (porcentaje) de todos los cortes hasta este inclusive"""
+    try:
+        # Obtener el total de plantas sembradas
+        total_plantas = 0
+        if self.siembra.area and self.siembra.densidad:
+            total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+        
+        if total_plantas <= 0:
+            return 0
             
-            # Calcular el índice (porcentaje)
-            if total_plantas > 0:
-                return round((self.cantidad_tallos / total_plantas) * 100, 2)
-            return 0
-        except:
-            return 0
+        # Obtener todos los cortes hasta el actual (inclusive)
+        cortes_anteriores = Corte.query.filter(
+            Corte.siembra_id == self.siembra_id,
+            Corte.num_corte <= self.num_corte
+        ).all()
+        
+        # Sumar tallos de todos los cortes
+        total_tallos = sum(c.cantidad_tallos for c in cortes_anteriores)
+        
+        # Calcular el índice acumulado
+        return round((total_tallos / total_plantas) * 100, 2)
+    except Exception as e:
+        print(f"Error al calcular índice acumulado: {str(e)}")
+        return 0
+
+# Añadir método para obtener predicción según la curva de producción
+def obtener_prediccion(self):
+    """
+    Obtiene la predicción de producción para el día actual según la curva
+    de producción de la variedad de la siembra.
+    
+    Returns:
+        dict: Diccionario con información de predicción o None si no hay datos
+    """
+    try:
+        from sqlalchemy import func
+        from flask import current_app
+        
+        # Obtener variedad
+        variedad_id = self.siembra.variedad_id
+        
+        # Obtener días desde siembra
+        dias_desde_siembra = (self.fecha_corte - self.siembra.fecha_siembra).days
+        
+        # Buscar todas las siembras con la misma variedad que tengan cortes
+        siembras_similares = Siembra.query.filter(
+            Siembra.variedad_id == variedad_id,
+            Siembra.siembra_id != self.siembra_id,  # Excluir la siembra actual
+            Siembra.cortes.any()  # Solo siembras con cortes
+        ).all()
+        
+        if not siembras_similares:
+            return None
+            
+        # Recopilar datos de índices en días similares
+        indices_similares = []
+        
+        for siembra in siembras_similares:
+            # Calcular total de plantas
+            total_plantas = int(siembra.area.area * siembra.densidad.valor)
+            
+            # Obtener cortes en un rango de +/- 5 días
+            cortes_similares = Corte.query.filter(
+                Corte.siembra_id == siembra.siembra_id,
+                func.abs(func.datediff(Corte.fecha_corte, siembra.fecha_siembra) - dias_desde_siembra) <= 5
+            ).all()
+            
+            for corte in cortes_similares:
+                # Calcular índice
+                indice = (corte.cantidad_tallos / total_plantas) * 100
+                indices_similares.append(indice)
+        
+        if not indices_similares:
+            return None
+            
+        # Calcular estadísticas
+        indice_promedio = sum(indices_similares) / len(indices_similares)
+        indice_maximo = max(indices_similares)
+        indice_minimo = min(indices_similares)
+        
+        return {
+            'indice_actual': self.indice_sobre_total,
+            'indice_promedio': round(indice_promedio, 2),
+            'indice_maximo': round(indice_maximo, 2),
+            'indice_minimo': round(indice_minimo, 2),
+            'diferencia': round(self.indice_sobre_total - indice_promedio, 2),
+            'num_referencias': len(indices_similares)
+        }
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener predicción: {str(e)}")
+        return None
 
 # Clase para acceder a las vistas de la base de datos
 class VistaProduccionAcumulada(db.Model):

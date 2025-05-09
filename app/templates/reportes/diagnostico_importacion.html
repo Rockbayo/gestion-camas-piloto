@@ -1,0 +1,124 @@
+<!-- app/templates/reportes/diagnostico_importacion.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Diagnóstico de Importación de Datos</h2>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Reportes
+        </a>
+        <a href="{{ url_for('admin.importar_historico') }}" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Importar Nuevos Datos
+        </a>
+    </div>
+    
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> Esta página proporciona información detallada sobre los datos importados en el sistema y ayuda a identificar posibles problemas.
+    </div>
+    
+    <!-- Estadísticas Generales -->
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Estadísticas Generales</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="display-4">{{ stats.total_siembras }}</h3>
+                            <p class="mb-0">Siembras Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="display-4">{{ stats.total_cortes }}</h3>
+                            <p class="mb-0">Cortes Totales</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h3 class="display-4">{{ stats.total_variedades }}</h3>
+                            <p class="mb-0">Variedades</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estado de la importación -->
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">Estado de la Importación</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Siembras sin cortes (incompletas)
+                    <span class="badge {% if siembras_sin_cortes > 0 %}bg-warning{% else %}bg-success{% endif %} rounded-pill">{{ siembras_sin_cortes }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Cortes con índices extremos (posibles errores)
+                    <span class="badge {% if cortes_indices_altos > 0 %}bg-warning{% else %}bg-success{% endif %} rounded-pill">{{ cortes_indices_altos }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Variedades con siembras registradas
+                    <span class="badge bg-info rounded-pill">{{ variedades_con_siembras }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Variedades con curvas disponibles -->
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Variedades con Curvas de Producción Disponibles</h5>
+        </div>
+        <div class="card-body">
+            {% if variedades_con_curvas %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Variedad</th>
+                            <th>Flor</th>
+                            <th>Color</th>
+                            <th>Siembras</th>
+                            <th>Cortes</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for var in variedades_con_curvas %}
+                        <tr>
+                            <td>{{ var.variedad }}</td>
+                            <td>{{ var.flor }}</td>
+                            <td>{{ var.color }}</td>
+                            <td>{{ var.siembras }}</td>
+                            <td>{{ var.cortes }}</td>
+                            <td>
+                                <a href="{{ url_for('reportes.curva_produccion', variedad_id=var.variedad_id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-chart-line"></i> Ver Curva
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> No hay variedades con suficientes datos para generar curvas de producción.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -44,6 +44,10 @@
                     <i class="fas fa-flag-checkered"></i> Finalizar Siembra
                 </a>
                 {% endif %}
+                <!-- Nuevo botón para ver curva de producción -->
+                <a href="{{ url_for('reportes.curva_produccion', variedad_id=siembra.variedad.variedad_id) }}" class="btn btn-info">
+                    <i class="fas fa-chart-line"></i> Ver Curva de Producción
+                </a>
             </div>
         </div>
     </div>
@@ -66,6 +70,30 @@
                     <p><strong>Total de Tallos:</strong> {{ siembra.total_tallos }}</p>
                 </div>
             </div>
+            
+            <!-- Visualización de cumplimiento de curva teórica (si hay datos) -->
+            {% if siembra.variedad and siembra.fecha_siembra and siembra.cortes|length > 0 %}
+            <div class="alert alert-info mt-3">
+                <p><strong>Rendimiento de Producción:</strong> Esta siembra está en el día <strong>{{ siembra.dias_ciclo }}</strong> desde su plantación.</p>
+                {% if siembra.total_tallos and siembra.area and siembra.densidad %}
+                    {% set plantas_totales = siembra.area.area * siembra.densidad.valor %}
+                    {% set indice_actual = (siembra.total_tallos / plantas_totales * 100)|round(2) %}
+                    <p>Índice de producción actual: <strong>{{ indice_actual }}%</strong></p>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ indice_actual }}%;" 
+                             aria-valuenow="{{ indice_actual }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ indice_actual }}%
+                        </div>
+                    </div>
+                    <p class="mt-2 mb-0">
+                        <a href="{{ url_for('reportes.curva_produccion', variedad_id=siembra.variedad.variedad_id) }}" class="alert-link">
+                            Ver curva completa de producción para esta variedad <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </p>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
     
@@ -107,7 +135,16 @@
                             <td>{{ (corte.fecha_corte - siembra.fecha_siembra).days }}</td>
                             <td>{{ corte.usuario.full_name }}</td>
                             <td>
-                                <!-- Acciones existentes -->
+                                <div class="btn-group">
+                                    {% if siembra.estado == 'Activa' %}
+                                    <a href="{{ url_for('cortes.editar', id=corte.corte_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('cortes.eliminar', id=corte.corte_id) }}" class="btn btn-sm btn-danger" data-confirm="¿Está seguro de eliminar este corte?" data-bs-toggle="tooltip" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
@@ -125,4 +162,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Activar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Manejar confirmaciones
+        var deleteLinks = document.querySelectorAll('a[data-confirm]');
+        deleteLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const url = this.getAttribute('href');
+                const message = this.getAttribute('data-confirm');
+                
+                if (confirm(message)) {
+                    window.location.href = url;
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
