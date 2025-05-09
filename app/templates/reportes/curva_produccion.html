@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Curva de Producción: {{ variedad.variedad }}</h2>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Reportes
+        </a>
+    </div>
+    
+    {% if grafico_curva %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Curva de Producción</h5>
+        </div>
+        <div class="card-body text-center">
+            <img src="data:image/png;base64,{{ grafico_curva }}" class="img-fluid" alt="Curva de producción">
+            <p class="text-muted mt-2">Nota: La línea punteada representa la tendencia de producción ajustada.</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if puntos_curva %}
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Datos de la Curva</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Día desde Siembra</th>
+                            <th>Índice Promedio (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for punto in puntos_curva %}
+                        <tr>
+                            <td>{{ punto.dia }}</td>
+                            <td>{{ punto.indice_promedio }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No hay datos suficientes para generar la curva de producción.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

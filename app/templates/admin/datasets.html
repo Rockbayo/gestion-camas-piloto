@@ -95,6 +95,21 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="card-title mb-0">Datos Históricos</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Importación de datos históricos de siembras, cortes e índices desde archivos Excel.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin.importar_historico') }}" class="btn btn-outline-dark">
+                            <i class="fas fa-history"></i> Importar Histórico
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div class="card mt-3 shadow">

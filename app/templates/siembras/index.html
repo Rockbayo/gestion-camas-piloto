@@ -1,4 +1,3 @@
-<<!--Plantilla para visualizar el listado de las siembras-->
 {% extends "base.html" %}
 
 {% block content %}
@@ -36,12 +35,12 @@
                             <td>{{ siembra.siembra_id }}</td>
                             <td>{{ siembra.bloque_cama.ubicacion_completa }}</td>
                             <td>{{ siembra.variedad.variedad }}</td>
-                            <td>{{ siembra.fecha_siembra.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ siembra.fecha_siembra|dateformat }}</td>
                             <td>
                                 {% if siembra.fecha_inicio_corte %}
-                                {{ siembra.fecha_inicio_corte.strftime('%d-%m-%Y') }}
+                                    {{ siembra.fecha_inicio_corte|dateformat }}
                                 {% else %}
-                                <span class="badge bg-warning">Pendiente</span>
+                                    <span class="badge bg-warning">Estado Vegetativo</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -58,15 +57,9 @@
                                     <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    {% if not siembra.fecha_inicio_corte %}
-                                    <a href="{{ url_for('siembras.inicio_corte', id=siembra.siembra_id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Registrar Inicio de Corte">
-                                        <i class="fas fa-scissors"></i>
-                                    </a>
-                                    {% else %}
-                                    <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Registrar Corte">
+                                    <a href="{{ url_for('cortes.crear', id=siembra.siembra_id) }}" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Registrar Corte">
                                         <i class="fas fa-leaf"></i>
                                     </a>
-                                    {% endif %}
                                     <a href="{{ url_for('siembras.finalizar', id=siembra.siembra_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de finalizar esta siembra?')" data-bs-toggle="tooltip" title="Finalizar">
                                         <i class="fas fa-check-circle"></i>
                                     </a>

@@ -1,9 +1,3 @@
-<!-- Plantilla para mostrar los detalles de una siembra -->
-{% set title = "Detalles de Siembra" %}
-{% set description = "Detalles de la siembra seleccionada, incluyendo información sobre cortes." %}
-
-{% block title %}{{ title }}{% endblock %}
-{% block description %}{{ description }}{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
@@ -30,12 +24,8 @@
                     <p><strong>Color:</strong> {{ siembra.variedad.flor_color.color.color }}</p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra.strftime('%d-%m-%Y') }}</p>
-                    {% if siembra.fecha_inicio_corte %}
-                    <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte.strftime('%d-%m-%Y') }}</p>
-                    {% else %}
-                    <p><strong>Fecha Inicio de Corte:</strong> <span class="badge bg-warning">Pendiente</span></p>
-                    {% endif %}
+                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat }}</p>
+                    <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte|dateformat }}</p>
                     <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
                     <p><strong>Días de Ciclo:</strong> {{ siembra.dias_ciclo }}</p>
                 </div>
@@ -47,15 +37,9 @@
                 <a href="{{ url_for('siembras.editar', id=siembra.siembra_id) }}" class="btn btn-warning">
                     <i class="fas fa-edit"></i> Editar Siembra
                 </a>
-                {% if not siembra.fecha_inicio_corte %}
-                <a href="{{ url_for('siembras.inicio_corte', id=siembra.siembra_id) }}" class="btn btn-info">
-                    <i class="fas fa-play"></i> Registrar Inicio de Corte
-                </a>
-                {% else %}
-                <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="btn btn-success">
+                <a href="{{ url_for('cortes.crear', id=siembra.siembra_id) }}" class="btn btn-success">
                     <i class="fas fa-cut"></i> Registrar Corte
                 </a>
-                {% endif %}
                 <a href="{{ url_for('siembras.finalizar', id=siembra.siembra_id) }}" class="btn btn-danger" onclick="return confirm('¿Está seguro de finalizar esta siembra? Esta acción no se puede deshacer.')">
                     <i class="fas fa-flag-checkered"></i> Finalizar Siembra
                 </a>
@@ -77,7 +61,7 @@
                     <p><strong>Registrado por:</strong> {{ siembra.usuario.full_name }}</p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Fecha de Registro:</strong> {{ siembra.fecha_registro.strftime('%d-%m-%Y %H:%M') }}</p>
+                    <p><strong>Fecha de Registro:</strong> {{ siembra.fecha_registro|dateformat('%d-%m-%Y %H:%M') }}</p>
                     <p><strong>Total de Cortes:</strong> {{ siembra.cortes|length }}</p>
                     <p><strong>Total de Tallos:</strong> {{ siembra.total_tallos }}</p>
                 </div>
@@ -99,6 +83,7 @@
                             <th>Corte #</th>
                             <th>Fecha</th>
                             <th>Cantidad</th>
+                            <th>Índice (%)</th>
                             <th>Días desde siembra</th>
                             <th>Registrado por</th>
                             <th>Acciones</th>
@@ -108,42 +93,32 @@
                         {% for corte in siembra.cortes|sort(attribute='num_corte') %}
                         <tr>
                             <td>{{ corte.num_corte }}</td>
-                            <td>{{ corte.fecha_corte.strftime('%d-%m-%Y') }}</td>
+                            <td>{{ corte.fecha_corte|dateformat }}</td>
                             <td>{{ corte.cantidad_tallos }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;" data-bs-toggle="tooltip" title="{{ corte.indice_sobre_total }}%">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ corte.indice_sobre_total }}%;" 
+                                         aria-valuenow="{{ corte.indice_sobre_total }}" aria-valuemin="0" aria-valuemax="100">
+                                        {{ corte.indice_sobre_total }}%
+                                    </div>
+                                </div>
+                            </td>
                             <td>{{ (corte.fecha_corte - siembra.fecha_siembra).days }}</td>
                             <td>{{ corte.usuario.full_name }}</td>
                             <td>
-                                {% if siembra.estado == 'Activa' %}
-                                <div class="btn-group">
-                                    <a href="{{ url_for('cortes.editar', id=corte.corte_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{{ url_for('cortes.eliminar', id=corte.corte_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este corte?')" data-bs-toggle="tooltip" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                                {% endif %}
+                                <!-- Acciones existentes -->
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
-                    <tfoot>
-                        <tr class="table-success">
-                            <td><strong>Total:</strong></td>
-                            <td colspan="1"></td>
-                            <td><strong>{{ siembra.total_tallos }}</strong></td>
-                            <td colspan="3"></td>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
             {% else %}
             <div class="alert alert-info">
                 No hay cortes registrados para esta siembra.
-                {% if siembra.estado == 'Activa' and siembra.fecha_inicio_corte %}
-                <a href="{{ url_for('cortes.crear', siembra_id=siembra.siembra_id) }}" class="alert-link">Registrar primer corte</a>.
-                {% elif siembra.estado == 'Activa' and not siembra.fecha_inicio_corte %}
-                Primero debe <a href="{{ url_for('siembras.inicio_corte', id=siembra.siembra_id) }}" class="alert-link">registrar la fecha de inicio de corte</a>.
+                {% if siembra.estado == 'Activa' %}
+                <a href="{{ url_for('cortes.crear', id=siembra.siembra_id) }}" class="alert-link">Registrar primer corte</a>.
                 {% endif %}
             </div>
             {% endif %}

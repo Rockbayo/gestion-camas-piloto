@@ -10,16 +10,30 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
 from sqlalchemy import func, desc
+import numpy as np
+from io import BytesIO
+import base64
+import matplotlib.pyplot as plt
 from app import db
 from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado
+
 
 # Resto del código...
 
 @reportes.route('/')
 @login_required
 def index():
-    return render_template('reportes/index.html', title='Reportes')
+    # Obtener solo las variedades que tienen siembras registradas
+    variedades_con_siembras = db.session.query(Variedad)\
+        .join(Siembra, Variedad.variedad_id == Siembra.variedad_id)\
+        .group_by(Variedad.variedad_id)\
+        .order_by(Variedad.variedad)\
+        .all()
+    
+    return render_template('reportes/index.html', 
+                          title='Reportes', 
+                          variedades=variedades_con_siembras)
 
 @reportes.route('/produccion_por_variedad')
 @login_required
@@ -362,3 +376,84 @@ def exportar_datos():
         )
     
     return jsonify({'error': 'Tipo de reporte no válido'})
+
+# Curva de producción por variedad
+@reportes.route('/curva_produccion/<int:variedad_id>')
+@login_required
+def curva_produccion(variedad_id):
+    # Obtener la variedad
+    variedad = Variedad.query.get_or_404(variedad_id)
+    
+    # Obtener todas las siembras de esta variedad con sus cortes
+    siembras = Siembra.query.filter_by(variedad_id=variedad_id).all()
+    
+    # Preparar datos para la curva
+    datos_curva = {}  # Diccionario para agrupar por día desde siembra
+    
+    for siembra in siembras:
+        if not siembra.fecha_siembra:
+            continue
+            
+        # Calculamos el total de plantas para esta siembra
+        total_plantas = 0
+        if siembra.area and siembra.densidad:
+            total_plantas = int(siembra.area.area * siembra.densidad.valor)
+            
+        if total_plantas == 0:
+            continue
+            
+        # Procesamos cada corte
+        for corte in siembra.cortes:
+            dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
+            
+            # Calculamos el índice para este corte
+            indice = (corte.cantidad_tallos / total_plantas) * 100
+            
+            # Agrupamos por día desde siembra
+            if dias_desde_siembra not in datos_curva:
+                datos_curva[dias_desde_siembra] = []
+                
+            datos_curva[dias_desde_siembra].append(indice)
+    
+    # Calculamos los promedios para cada día
+    puntos_curva = []
+    for dia, indices in sorted(datos_curva.items()):
+        indice_promedio = sum(indices) / len(indices)
+        puntos_curva.append({
+            'dia': dia,
+            'indice_promedio': round(indice_promedio, 2)
+        })
+    
+    # Generar el gráfico
+    if puntos_curva:
+        dias = [punto['dia'] for punto in puntos_curva]
+        indices = [punto['indice_promedio'] for punto in puntos_curva]
+        
+        plt.figure(figsize=(10, 6))
+        plt.plot(dias, indices, 'o-', markersize=8)
+        plt.xlabel('Días desde siembra')
+        plt.ylabel('Índice promedio (%)')
+        plt.title(f'Curva de producción: {variedad.variedad}')
+        plt.grid(True)
+        
+        # Añadir línea de tendencia (opcional)
+        if len(dias) > 1:
+            z = np.polyfit(dias, indices, 2)  # Polinomio de grado 2
+            p = np.poly1d(z)
+            dias_suavizados = np.linspace(min(dias), max(dias), 100)
+            plt.plot(dias_suavizados, p(dias_suavizados), 'r--')
+        
+        # Guardar gráfico en formato base64
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        grafico_curva = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
+    else:
+        grafico_curva = None
+    
+    return render_template('reportes/curva_produccion.html',
+                          title=f'Curva de Producción: {variedad.variedad}',
+                          variedad=variedad,
+                          puntos_curva=puntos_curva,
+                          grafico_curva=grafico_curva)
