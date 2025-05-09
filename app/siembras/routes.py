@@ -7,6 +7,8 @@ from app.siembras.forms import SiembraForm, InicioCorteForm
 from app.models import Siembra, BloqueCamaLado, Variedad, Area, Densidad, Flor, Color, FlorColor, Bloque, Cama, Lado
 from datetime import datetime
 from sqlalchemy import and_
+from sqlalchemy import func
+
 
 @bp.route('/')
 @login_required
@@ -47,27 +49,47 @@ def crear():
         densidad_id = request.args.get('densidad_id', type=int)
         
         if cantidad_plantas and densidad_id:
-            # Obtener la densidad (plantas por metro cuadrado)
-            densidad = Densidad.query.get(densidad_id)
-            if densidad:
+            try:
+                # Obtener la densidad (plantas por metro cuadrado)
+                densidad = Densidad.query.get(densidad_id)
+                if not densidad:
+                    return jsonify({'error': f'No se encontró la densidad con ID: {densidad_id}'})
+                
+                # Verificar que el valor de densidad sea mayor que cero
+                if not densidad.valor or densidad.valor <= 0:
+                    return jsonify({'error': f'La densidad {densidad.densidad} tiene un valor inválido: {densidad.valor}'})
+                
                 # Calcular el área = cantidad de plantas / densidad (plantas/m²)
                 area_calculada = round(cantidad_plantas / densidad.valor, 2)
                 
-                # Buscar si existe un área con este valor aproximado (permitimos un margen de error)
+                # Generar un nombre para el área si no existe
+                area_nombre = f"ÁREA {area_calculada}m²"
+                
+                # Ampliar el margen de búsqueda para encontrar más coincidencias
+                # O simplificar para buscar áreas con valores exactos o muy cercanos
+                from sqlalchemy import func  # Asegúrate de importar func de SQLAlchemy
                 area = Area.query.filter(
-                    and_(
-                        Area.area >= area_calculada * 0.95,  # 5% de margen inferior
-                        Area.area <= area_calculada * 1.05   # 5% de margen superior
-                    )
+                    func.abs(Area.area - area_calculada) < 0.1  # Diferencia menor a 0.1 m²
                 ).first()
                 
-                area_id = area.area_id if area else None
+                # Si no se encuentra un área similar, crear una nueva descripción 
+                # pero no guardarla todavía (se creará al guardar la siembra)
+                if area:
+                    area_id = area.area_id
+                    area_nombre = area.siembra
+                else:
+                    area_id = None
+                    # Convertir a un formato más legible
+                    area_nombre = f"ÁREA {area_calculada:.2f}m²"
                 
                 return jsonify({
                     'area_calculada': area_calculada,
                     'area_id': area_id,
-                    'area_nombre': area.siembra if area else None
+                    'area_nombre': area_nombre
                 })
+            except Exception as e:
+                print(f"Error al calcular área: {str(e)}")
+                return jsonify({'error': f'Error al calcular área: {str(e)}'})
         
         return jsonify({'error': 'No se pudo calcular el área'})
     

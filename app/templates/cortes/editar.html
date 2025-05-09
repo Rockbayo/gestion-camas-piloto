@@ -1,10 +1,5 @@
-# Plantilla para editar un cortes
-
-{% set title = "Editar Corte" %}
-{% set description = "Formulario para editar un corte de siembra." %}
-
-{% block title %}{{ title }}{% endblock %}
-{% block description %}{{ description }}{% endblock %}
+{% block title %}Editar Corte{% endblock %}
+{% block description %}Formulario para editar un corte de siembra{% endblock %}
 {% extends "base.html" %}
 
 {% block content %}
@@ -34,12 +29,20 @@
                     <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
                 </div>
             </div>
+            
+            <!-- Información de disponibilidad -->
+            <div class="alert {% if tallos_disponibles <= 0 %}alert-danger{% elif tallos_disponibles < total_plantas_sembradas * 0.1 %}alert-warning{% else %}alert-info{% endif %} mt-3">
+                <p class="mb-0"><strong>Total de plantas sembradas:</strong> {{ total_plantas_sembradas }}</p>
+                <p class="mb-0"><strong>Total de tallos ya cortados (sin este corte):</strong> {{ total_tallos_otros_cortes }}</p>
+                <p class="mb-0"><strong>Cantidad actual de este corte:</strong> {{ corte.cantidad_tallos }}</p>
+                <p class="mb-0"><strong>Tallos disponibles para asignar a este corte:</strong> <span class="fw-bold">{{ tallos_disponibles + corte.cantidad_tallos }}</span></p>
+            </div>
         </div>
     </div>
     
     <div class="card mt-4 shadow">
         <div class="card-header bg-warning text-dark">
-            <h5 class="card-title mb-0">Editar Corte #{{ corte.corte_id }}</h5>
+            <h5 class="card-title mb-0">Editar Corte #{{ corte.num_corte }}</h5>
         </div>
         <div class="card-body">
             <form method="POST" action="">
@@ -83,4 +86,52 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const cantidadTallosInput = document.getElementById('cantidad_tallos');
+        
+        // Valores iniciales
+        const tallosDisponibles = {{ tallos_disponibles + corte.cantidad_tallos }};
+        const cantidadActual = {{ corte.cantidad_tallos }};
+        
+        // Función para validar la cantidad de tallos
+        function validarCantidad() {
+            const cantidad = parseInt(cantidadTallosInput.value, 10) || 0;
+            
+            if (cantidad <= 0) {
+                cantidadTallosInput.setCustomValidity('La cantidad debe ser mayor que cero');
+                return false;
+            }
+            
+            if (cantidad > tallosDisponibles) {
+                cantidadTallosInput.setCustomValidity(`No hay suficientes tallos disponibles (máximo: ${tallosDisponibles})`);
+                return false;
+            }
+            
+            cantidadTallosInput.setCustomValidity('');
+            return true;
+        }
+        
+        // Validar al cambiar el valor
+        cantidadTallosInput.addEventListener('input', function() {
+            validarCantidad();
+            cantidadTallosInput.reportValidity();
+        });
+        
+        // Validar al enviar el formulario
+        form.addEventListener('submit', function(event) {
+            if (!validarCantidad()) {
+                event.preventDefault();
+                cantidadTallosInput.focus();
+            }
+        });
+        
+        // Validar inicialmente
+        validarCantidad();
+    });
+</script>
 {% endblock %}

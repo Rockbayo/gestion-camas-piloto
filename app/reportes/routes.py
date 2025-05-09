@@ -1,3 +1,8 @@
+# Primero configurar el backend antes de importar pyplot
+import matplotlib
+matplotlib.use('Agg')  # Configurar backend no interactivo
+
+# Resto de las importaciones
 from flask import render_template, request, jsonify, send_file
 from flask_login import login_required
 import pandas as pd
@@ -8,6 +13,8 @@ from sqlalchemy import func, desc
 from app import db
 from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado
+
+# Resto del código...
 
 @reportes.route('/')
 @login_required

@@ -1,9 +1,3 @@
-# Plantilla para registrar un nuevo corte
-
-{% set title = "Registrar Corte" %}
-{% set siembra = siembra %}
-{% set form = form %}
-
 {% block title %}Registrar Corte{% endblock %}
 {% extends "base.html" %}
 
@@ -33,6 +27,13 @@
                     <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte.strftime('%d-%m-%Y') }}</p>
                     <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
                 </div>
+            </div>
+            
+            <!-- Información de disponibilidad -->
+            <div class="alert {% if tallos_disponibles <= 0 %}alert-danger{% elif tallos_disponibles < total_plantas_sembradas * 0.1 %}alert-warning{% else %}alert-info{% endif %} mt-3">
+                <p class="mb-0"><strong>Total de plantas sembradas:</strong> {{ total_plantas_sembradas }}</p>
+                <p class="mb-0"><strong>Total de tallos ya cortados:</strong> {{ total_tallos_actuales }}</p>
+                <p class="mb-0"><strong>Tallos disponibles para cortar:</strong> <span class="fw-bold">{{ tallos_disponibles }}</span></p>
             </div>
         </div>
     </div>
@@ -83,4 +84,52 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const cantidadTallosInput = document.getElementById('cantidad_tallos');
+        
+        // Valores iniciales
+        {% if corte is defined %}
+            const tallosDisponibles = {{ tallos_disponibles + corte.cantidad_tallos }};
+        {% else %}
+            const tallosDisponibles = {{ tallos_disponibles }};
+        {% endif %}
+        
+        // Función para validar la cantidad de tallos
+        function validarCantidad() {
+            const cantidad = parseInt(cantidadTallosInput.value, 10) || 0;
+            
+            if (cantidad <= 0) {
+                cantidadTallosInput.setCustomValidity('La cantidad debe ser mayor que cero');
+                return false;
+            }
+            
+            if (cantidad > tallosDisponibles) {
+                cantidadTallosInput.setCustomValidity(`No hay suficientes tallos disponibles (máximo: ${tallosDisponibles})`);
+                return false;
+            }
+            
+            cantidadTallosInput.setCustomValidity('');
+            return true;
+        }
+        
+        // Validar al cambiar el valor
+        cantidadTallosInput.addEventListener('input', function() {
+            validarCantidad();
+            cantidadTallosInput.reportValidity();
+        });
+        
+        // Validar al enviar el formulario
+        form.addEventListener('submit', function(event) {
+            if (!validarCantidad()) {
+                event.preventDefault();
+                cantidadTallosInput.focus();
+            }
+        });
+    });
+</script>
 {% endblock %}
