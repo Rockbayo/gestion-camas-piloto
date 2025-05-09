@@ -9,8 +9,12 @@
         <div class="col-md-3">
             <div class="card bg-primary text-white h-100">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-leaf fa-fw"></i> Siembras Activas</h5>
-                    <p class="card-text display-4">{{ stats.siembras_activas }}</p>
+                    <h5 class="card-title"><i class="fas fa-leaf fa-fw"></i> Siembras Totales</h5>
+                    <p class="card-text display-4">{{ stats.total_siembras }}</p>
+                    <div class="d-flex justify-content-between small">
+                        <span>Activas: {{ stats.siembras_activas }}</span>
+                        <span>Históricas: {{ stats.siembras_historicas }}</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -27,6 +31,7 @@
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-seedling fa-fw"></i> Total Tallos</h5>
                     <p class="card-text display-4">{{ "{:,}".format(stats.total_tallos) }}</p>
+                    <small>Promedio: {{ stats.promedio_tallos }} por siembra</small>
                 </div>
             </div>
         </div>
@@ -40,9 +45,14 @@
         </div>
     </div>
     
+    <!-- Indicador de integración de datos -->
+    <div class="alert alert-success mb-4">
+        <i class="fas fa-info-circle"></i> <strong>Datos integrados:</strong> Las estadísticas y gráficos incluyen tanto los datos nuevos como los datos históricos importados.
+    </div>
+    
     <div class="row">
         <!-- Gráfico de Producción por Variedad -->
-        <div class="col-md-8 mb-4">
+        <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-light">
                     <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Top 5 Variedades por Producción</h5>
@@ -59,11 +69,31 @@
             </div>
         </div>
         
-        <!-- Últimos Cortes -->
-        <div class="col-md-4 mb-4">
+        <!-- Gráfico de Tendencia Mensual (Nuevo) -->
+        <div class="col-md-6 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-cut"></i> Últimos Cortes</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> Tendencia de Producción Mensual</h5>
+                </div>
+                <div class="card-body">
+                    {% if tendencia_mensual %}
+                    <img src="data:image/png;base64,{{ tendencia_mensual }}" class="img-fluid" alt="Gráfico de tendencia mensual">
+                    {% else %}
+                    <div class="alert alert-info">
+                        No hay datos suficientes para generar el gráfico.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Últimos Cortes -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-cut"></i> Últimos Cortes (Nuevos + Históricos)</h5>
                 </div>
                 <div class="card-body">
                     {% if ultimos_cortes %}
@@ -87,54 +117,37 @@
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Últimas Siembras -->
-    <div class="card mb-4">
-        <div class="card-header bg-light">
-            <h5 class="card-title mb-0"><i class="fas fa-seedling"></i> Últimas Siembras</h5>
-        </div>
-        <div class="card-body">
-            {% if ultimas_siembras %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Ubicación</th>
-                            <th>Variedad</th>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+        
+        <!-- Últimas Siembras -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="card-title mb-0"><i class="fas fa-seedling"></i> Últimas Siembras (Nuevas + Históricas)</h5>
+                </div>
+                <div class="card-body">
+                    {% if ultimas_siembras %}
+                    <div class="list-group">
                         {% for siembra in ultimas_siembras %}
-                        <tr>
-                            <td>{{ siembra.siembra_id }}</td>
-                            <td>{{ siembra.bloque_cama.ubicacion_completa }}</td>
-                            <td>{{ siembra.variedad.variedad }}</td>
-                            <td>{{ siembra.fecha_siembra|dateformat }}</td>
-                            <td>
-                                <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ siembra.estado }}
-                                </span>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-sm btn-info">
-                                    <i class="fas fa-eye"></i> Ver
-                                </a>
-                            </td>
-                        </tr>
+                        <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ siembra.variedad.variedad }}</h6>
+                                <small>{{ siembra.fecha_siembra|dateformat }}</small>
+                            </div>
+                            <p class="mb-1">{{ siembra.bloque_cama.ubicacion_completa }}</p>
+                            <div class="d-flex justify-content-between">
+                                <small>Estado: <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></small>
+                                <small>Cortes: {{ siembra.cortes|length }}</small>
+                            </div>
+                        </a>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No hay siembras registradas.
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% else %}
-            <div class="alert alert-info">
-                No hay siembras registradas.
-            </div>
-            {% endif %}
         </div>
     </div>
 </div>

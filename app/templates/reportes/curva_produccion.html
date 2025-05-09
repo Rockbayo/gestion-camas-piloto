@@ -2,16 +2,45 @@
 
 {% block content %}
 <div class="container">
-    <h2>Curva de Producción: {{ variedad.variedad }}</h2>
+    <h2 class="mb-4">Curva de Producción: {{ variedad.variedad }}</h2>
     
     <div class="mb-3">
         <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Volver a Reportes
         </a>
+        <!-- Añadir botón para ver diagnóstico -->
+        <a href="{{ url_for('reportes.diagnostico_importacion') }}" class="btn btn-info ms-2">
+            <i class="fas fa-microscope"></i> Ver Diagnóstico
+        </a>
+    </div>
+    
+    <div class="alert alert-success">
+        <i class="fas fa-info-circle"></i> <strong>Datos integrados:</strong> Esta curva muestra el comportamiento histórico y actual combinado para la variedad {{ variedad.variedad }}.
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Información de Variedad</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Variedad:</strong> {{ variedad.variedad }}</p>
+                    <p><strong>Flor:</strong> {{ variedad.flor_color.flor.flor }}</p>
+                    <p><strong>Color:</strong> {{ variedad.flor_color.color.color }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Total de siembras analizadas:</strong> {{ datos_adicionales.siembras_con_datos }} de {{ datos_adicionales.total_siembras }}</p>
+                    <p><strong>Total de plantas:</strong> {{ "{:,}".format(datos_adicionales.total_plantas) }}</p>
+                    <p><strong>Total de tallos:</strong> {{ "{:,}".format(datos_adicionales.total_tallos) }}</p>
+                    <p><strong>Índice de producción promedio:</strong> {{ datos_adicionales.promedio_produccion }}%</p>
+                </div>
+            </div>
+        </div>
     </div>
     
     {% if grafico_curva %}
-    <div class="card mb-4">
+    <div class="card shadow mb-4">
         <div class="card-header bg-primary text-white">
             <h5 class="card-title mb-0">Curva de Producción</h5>
         </div>
@@ -23,7 +52,7 @@
     {% endif %}
     
     {% if puntos_curva %}
-    <div class="card">
+    <div class="card shadow">
         <div class="card-header bg-light">
             <h5 class="card-title mb-0">Datos de la Curva</h5>
         </div>
@@ -34,13 +63,28 @@
                         <tr>
                             <th>Día desde Siembra</th>
                             <th>Índice Promedio (%)</th>
+                            <th>Rango (Min-Max)</th>
+                            <th>Muestras</th>
+                            <th>Visualización</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for punto in puntos_curva %}
+                        {% for punto in puntos_curva|sort(attribute='dia') %}
                         <tr>
                             <td>{{ punto.dia }}</td>
                             <td>{{ punto.indice_promedio }}%</td>
+                            <td>{{ punto.min_indice }}% - {{ punto.max_indice }}%</td>
+                            <td>{{ punto.num_datos }}</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ punto.indice_promedio }}%;" 
+                                         aria-valuenow="{{ punto.indice_promedio }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ punto.indice_promedio }}%
+                                    </div>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -50,8 +94,30 @@
     </div>
     {% else %}
     <div class="alert alert-info">
-        No hay datos suficientes para generar la curva de producción.
+        <i class="fas fa-info-circle"></i> No hay datos suficientes para generar la curva de producción. Importe datos históricos o registre más cortes para esta variedad.
     </div>
     {% endif %}
+    
+    <div class="card shadow mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">¿Cómo interpretar la curva de producción?</h5>
+        </div>
+        <div class="card-body">
+            <p>La curva de producción muestra el índice promedio de tallos producidos respecto al total de plantas sembradas, en función de los días transcurridos desde la siembra.</p>
+            <ul>
+                <li><strong>Día desde siembra:</strong> Número de días transcurridos desde la fecha de siembra</li>
+                <li><strong>Índice promedio:</strong> Porcentaje promedio de tallos producidos respecto al total de plantas sembradas</li>
+                <li><strong>Rango:</strong> Valores mínimo y máximo registrados para ese día</li>
+                <li><strong>Muestras:</strong> Número de datos recopilados para ese día</li>
+            </ul>
+            <p>Esta información es útil para:</p>
+            <ul>
+                <li>Predecir cuándo esperar la producción máxima</li>
+                <li>Comparar el rendimiento entre variedades</li>
+                <li>Planificar ciclos de siembra y corte</li>
+                <li>Identificar problemas de producción</li>
+            </ul>
+        </div>
+    </div>
 </div>
 {% endblock %}

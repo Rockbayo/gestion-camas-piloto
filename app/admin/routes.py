@@ -8,7 +8,7 @@ from app.admin.forms import (
 )
 from app.models import (
     Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
-    Densidad, Siembra
+    Densidad, Siembra, Corte, Area, Usuario
 )
 from app.utils.dataset_importer import DatasetImporter
 import os
@@ -479,3 +479,20 @@ def importar_historico():
             return redirect(request.url)
     
     return render_template('admin/importar_historico.html', title='Importar Datos Históricos')
+
+@bp.route('/reimportar_historico', methods=['GET'])
+@login_required
+def reimportar_historico():
+    """Elimina los datos históricos actuales y fuerza una nueva importación"""
+    # Verificar permisos
+    if not current_user.has_permission('importar_datos'):
+        flash('No tienes permiso para importar datos', 'danger')
+        return redirect(url_for('main.index'))
+    
+    # Eliminar datos existentes (opcional)
+    # Esta es una operación peligrosa - podría eliminar también datos no históricos
+    # Por lo que necesitarías implementar una lógica para identificar solo datos históricos
+    
+    # Redirigir a la página de importación
+    flash('Por favor, seleccione el archivo histórico para reimportar', 'warning')
+    return redirect(url_for('admin.importar_historico'))

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Curva de Producción Interactiva: {{ variedad.variedad }}</h2>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Reportes
+        </a>
+        <!-- Añadir botón para alternar entre versión interactiva y estática -->
+        <a href="{{ url_for('reportes.curva_produccion', variedad_id=variedad.variedad_id) }}" class="btn btn-outline-primary ml-2">
+            <i class="fas fa-chart-line"></i> Ver Versión Estática
+        </a>
+    </div>
+    
+    <!-- Contenedor para el componente React -->
+    <div id="curva-produccion-container" data-variedad-id="{{ variedad.variedad_id }}" data-api-url="{{ api_url }}"></div>
+    
+    <!-- Explicación adicional -->
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">¿Cómo interpretar la curva de producción?</h5>
+        </div>
+        <div class="card-body">
+            <p>La curva de producción muestra el índice promedio de tallos producidos respecto al total de plantas sembradas, en función de los días transcurridos desde la siembra.</p>
+            <ul>
+                <li><strong>Línea azul:</strong> Tendencia promedio histórica de producción para esta variedad</li>
+                <li><strong>Puntos naranjas:</strong> Índices individuales de producción</li>
+                <li><strong>Línea de referencia verde:</strong> Objetivo de producción (75%)</li>
+            </ul>
+            <p>Esta información es útil para:</p>
+            <ul>
+                <li>Predecir cuándo esperar la producción máxima</li>
+                <li>Comparar el rendimiento entre siembras</li>
+                <li>Planificar ciclos de siembra y corte</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Necesitamos incluir React y ReactDOM -->
+<script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js" crossorigin></script>
+<!-- Recharts para las gráficas -->
+<script src="https://unpkg.com/recharts@2.1.12/umd/Recharts.min.js" crossorigin></script>
+
+<script>
+// Este script inicializa el componente React cuando la página se carga
+document.addEventListener('DOMContentLoaded', function() {
+    // Obtener el contenedor y los datos
+    const container = document.getElementById('curva-produccion-container');
+    const variedadId = container.dataset.variedadId;
+    const apiUrl = container.dataset.apiUrl;
+    
+    // Aquí cargaríamos nuestro componente React
+    // En una implementación real, esto se haría con un sistema de build como webpack
+    // Para este ejemplo, podemos usar un enfoque simplificado
+    
+    // Mostrar un mensaje de carga mientras se prepara el componente
+    container.innerHTML = `
+        <div class="alert alert-info">
+            <i class="fas fa-spinner fa-spin"></i> Cargando visualización interactiva...
+        </div>
+    `;
+    
+    // Simular la carga del componente React (en la implementación real esto se manejaría diferente)
+    setTimeout(() => {
+        container.innerHTML = `
+            <div class="card shadow">
+                <div class="card-body">
+                    <div class="text-center py-5">
+                        <h4>Visualización Interactiva</h4>
+                        <p>Para implementar completamente el componente React de visualización interactiva, 
+                        es necesario configurar un entorno de desarrollo con React, Babel y Webpack.</p>
+                        <p>Mientras tanto, puede utilizar la versión estática de la curva de producción.</p>
+                        <a href="{{ url_for('reportes.curva_produccion', variedad_id=variedad.variedad_id) }}" 
+                           class="btn btn-primary mt-3">
+                            Ver Versión Estática
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Realizar una petición a la API para demostrar que funciona
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Datos de la API de curva de producción:', data);
+                // Aquí se renderizaría el componente React con estos datos
+            })
+            .catch(error => {
+                console.error('Error al obtener datos de la API:', error);
+            });
+    }, 1500);
+});
+</script>
+{% endblock %}

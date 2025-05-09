@@ -3,7 +3,8 @@ import matplotlib
 matplotlib.use('Agg')  # Configurar backend no interactivo
 
 # Resto de las importaciones
-from flask import render_template, request, jsonify, send_file
+from flask import jsonify, render_template, request, send_file, url_for, current_app
+import json
 from flask_login import login_required
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,6 +18,7 @@ import matplotlib.pyplot as plt
 from app import db
 from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado
+
 
 
 # Resto del código...
@@ -378,9 +380,14 @@ def exportar_datos():
     return jsonify({'error': 'Tipo de reporte no válido'})
 
 # Curva de producción por variedad
+
 @reportes.route('/curva_produccion/<int:variedad_id>')
 @login_required
 def curva_produccion(variedad_id):
+    """
+    Genera y muestra la curva de producción para una variedad específica,
+    basada en los datos históricos y actuales de siembras y cortes.
+    """
     # Obtener la variedad
     variedad = Variedad.query.get_or_404(variedad_id)
     
@@ -389,6 +396,177 @@ def curva_produccion(variedad_id):
     
     # Preparar datos para la curva
     datos_curva = {}  # Diccionario para agrupar por día desde siembra
+    total_siembras = 0
+    siembras_con_datos = 0
+    
+    # Estadísticas adicionales
+    total_plantas = 0
+    total_tallos = 0
+    
+    for siembra in siembras:
+        if not siembra.fecha_siembra:
+            continue
+            
+        # Incrementar contador de siembras válidas
+        total_siembras += 1
+        
+        # Verificar si tiene cortes
+        if not siembra.cortes:
+            continue
+            
+        # Calculamos el total de plantas para esta siembra
+        plantas_siembra = 0
+        if siembra.area and siembra.densidad:
+            plantas_siembra = int(siembra.area.area * siembra.densidad.valor)
+            
+        if plantas_siembra == 0:
+            continue  # No podemos calcular índices sin cantidad de plantas
+        
+        # Incrementar contador de siembras con datos
+        siembras_con_datos += 1
+        
+        # Acumular estadísticas
+        total_plantas += plantas_siembra
+        
+        # Procesamos cada corte
+        for corte in siembra.cortes:
+            total_tallos += corte.cantidad_tallos
+            dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
+            
+            # Calculamos el índice para este corte
+            indice = (corte.cantidad_tallos / plantas_siembra) * 100
+            
+            # Agrupamos por día desde siembra
+            if dias_desde_siembra not in datos_curva:
+                datos_curva[dias_desde_siembra] = []
+                
+            datos_curva[dias_desde_siembra].append(indice)
+    
+    # Calculamos los promedios para cada día
+    puntos_curva = []
+    for dia, indices in sorted(datos_curva.items()):
+        # Si hay muchos valores, filtrar outliers
+        if len(indices) >= 5:
+            # Ordenar los valores
+            indices.sort()
+            # Descartar el 10% de los valores extremos
+            num_descartar = int(len(indices) * 0.1)
+            indices_filtrados = indices[num_descartar:len(indices)-num_descartar]
+            indice_promedio = sum(indices_filtrados) / len(indices_filtrados)
+        else:
+            indice_promedio = sum(indices) / len(indices)
+            
+        puntos_curva.append({
+            'dia': dia,
+            'indice_promedio': round(indice_promedio, 2),
+            'num_datos': len(indices),
+            'min_indice': round(min(indices), 2),
+            'max_indice': round(max(indices), 2)
+        })
+    
+    # Ordenar por día
+    puntos_curva.sort(key=lambda x: x['dia'])
+    
+    # Generar el gráfico
+    grafico_curva = None
+    if puntos_curva:
+        import matplotlib.pyplot as plt
+        import numpy as np
+        from io import BytesIO
+        import base64
+        
+        # Datos para el gráfico
+        dias = [punto['dia'] for punto in puntos_curva]
+        indices = [punto['indice_promedio'] for punto in puntos_curva]
+        
+        # Si hay muy pocos puntos, no intentar generar curva de tendencia
+        generate_trend = len(dias) >= 3
+        
+        # Crear figura
+        plt.figure(figsize=(10, 6))
+        
+        # Gráfico de dispersión de los puntos reales
+        plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
+        
+        # Línea que conecta los puntos
+        plt.plot(dias, indices, 'b-', alpha=0.5)
+        
+        # Añadir línea de tendencia si hay suficientes datos
+        if generate_trend:
+            # Decidir el grado del polinomio según cantidad de datos
+            poly_degree = min(3, len(dias) - 1) if len(dias) <= 10 else 3
+            
+            # Calcular el polinomio
+            z = np.polyfit(dias, indices, poly_degree)
+            p = np.poly1d(z)
+            
+            # Generar puntos para la línea de tendencia
+            dias_suavizados = np.linspace(min(dias), max(dias), 100)
+            indices_suavizados = p(dias_suavizados)
+            
+            # Plotear línea de tendencia
+            plt.plot(dias_suavizados, indices_suavizados, 'r--', 
+                     label=f'Tendencia (grado {poly_degree})')
+        
+        # Configurar gráfico
+        plt.xlabel('Días desde siembra')
+        plt.ylabel('Índice promedio (%)')
+        plt.title(f'Curva de producción: {variedad.variedad}')
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        
+        # Limitar el rango del eje Y para visualización más clara
+        plt.ylim(0, min(150, max(indices) * 1.2 if indices else 100))  # Limitar a 150% o 1.2 veces el máximo
+        
+        # Añadir anotaciones con los índices en cada punto
+        for i, (dia, indice) in enumerate(zip(dias, indices)):
+            plt.annotate(f'{indice}%', (dia, indice), 
+                        textcoords="offset points", 
+                        xytext=(0,10), 
+                        ha='center')
+        
+        # Guardar gráfico en formato base64
+        buffer = BytesIO()
+        plt.tight_layout()
+        plt.savefig(buffer, format='png', dpi=100)
+        buffer.seek(0)
+        grafico_curva = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
+    
+    # Datos adicionales para la plantilla
+    datos_adicionales = {
+        'total_siembras': total_siembras,
+        'siembras_con_datos': siembras_con_datos,
+        'total_plantas': total_plantas,
+        'total_tallos': total_tallos,
+        'promedio_produccion': round((total_tallos / total_plantas * 100), 2) if total_plantas > 0 else 0
+    }
+    
+    return render_template('reportes/curva_produccion.html',
+                          title=f'Curva de Producción: {variedad.variedad}',
+                          variedad=variedad,
+                          puntos_curva=puntos_curva,
+                          grafico_curva=grafico_curva,
+                          datos_adicionales=datos_adicionales)
+
+# Agrega esta nueva función para la API JSON
+@reportes.route('/api/curva_produccion/<int:variedad_id>')
+@login_required
+def api_curva_produccion(variedad_id):
+    """
+    API para obtener datos de curva de producción en formato JSON.
+    Útil para visualizaciones interactivas mediante React u otras bibliotecas JS.
+    """
+    # Obtener la variedad
+    variedad = Variedad.query.get_or_404(variedad_id)
+    
+    # Obtener todas las siembras de esta variedad con sus cortes
+    siembras = Siembra.query.filter_by(variedad_id=variedad_id).all()
+    
+    # Preparar datos para la curva
+    datos_curva = {}  # Diccionario para agrupar por día desde siembra
+    total_siembras = 0
+    siembras_con_datos = 0
     
     for siembra in siembras:
         if not siembra.fecha_siembra:
@@ -401,6 +579,16 @@ def curva_produccion(variedad_id):
             
         if total_plantas == 0:
             continue
+        
+        # Incrementar contador de siembras válidas
+        total_siembras += 1
+        
+        # Verificar si tiene cortes
+        if not siembra.cortes:
+            continue
+            
+        # Incrementar contador de siembras con datos
+        siembras_con_datos += 1
             
         # Procesamos cada corte
         for corte in siembra.cortes:
@@ -418,42 +606,122 @@ def curva_produccion(variedad_id):
     # Calculamos los promedios para cada día
     puntos_curva = []
     for dia, indices in sorted(datos_curva.items()):
-        indice_promedio = sum(indices) / len(indices)
+        # Calcular el promedio, descartar valores atípicos si hay suficientes datos
+        if len(indices) >= 5:
+            # Ordenar los valores
+            indices.sort()
+            # Descartar el 10% de los valores extremos
+            num_descartar = int(len(indices) * 0.1)
+            indices_filtrados = indices[num_descartar:len(indices)-num_descartar]
+            indice_promedio = sum(indices_filtrados) / len(indices_filtrados)
+        else:
+            indice_promedio = sum(indices) / len(indices)
+            
         puntos_curva.append({
             'dia': dia,
-            'indice_promedio': round(indice_promedio, 2)
+            'indice': round(max(indices), 2),  # Para visualizar el máximo como punto de referencia
+            'promedio': round(indice_promedio, 2),
+            'num_datos': len(indices)
         })
     
-    # Generar el gráfico
-    if puntos_curva:
-        dias = [punto['dia'] for punto in puntos_curva]
-        indices = [punto['indice_promedio'] for punto in puntos_curva]
-        
-        plt.figure(figsize=(10, 6))
-        plt.plot(dias, indices, 'o-', markersize=8)
-        plt.xlabel('Días desde siembra')
-        plt.ylabel('Índice promedio (%)')
-        plt.title(f'Curva de producción: {variedad.variedad}')
-        plt.grid(True)
-        
-        # Añadir línea de tendencia (opcional)
-        if len(dias) > 1:
-            z = np.polyfit(dias, indices, 2)  # Polinomio de grado 2
-            p = np.poly1d(z)
-            dias_suavizados = np.linspace(min(dias), max(dias), 100)
-            plt.plot(dias_suavizados, p(dias_suavizados), 'r--')
-        
-        # Guardar gráfico en formato base64
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
-        grafico_curva = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        plt.close()
-    else:
-        grafico_curva = None
+    # Ordenar por día
+    puntos_curva.sort(key=lambda x: x['dia'])
     
-    return render_template('reportes/curva_produccion.html',
-                          title=f'Curva de Producción: {variedad.variedad}',
+    # Calcular días promedio al primer corte si hay datos suficientes
+    primer_corte_dias = []
+    for siembra in siembras:
+        if siembra.fecha_siembra and siembra.fecha_inicio_corte:
+            dias = (siembra.fecha_inicio_corte - siembra.fecha_siembra).days
+            primer_corte_dias.append(dias)
+    
+    dias_promedio_primer_corte = None
+    if primer_corte_dias:
+        dias_promedio_primer_corte = round(sum(primer_corte_dias) / len(primer_corte_dias), 1)
+    
+    # Devolver datos en formato JSON
+    return jsonify({
+        'variedad': {
+            'id': variedad.variedad_id,
+            'nombre': variedad.variedad,
+            'flor': variedad.flor_color.flor.flor,
+            'color': variedad.flor_color.color.color
+        },
+        'estadisticas': {
+            'total_siembras': total_siembras,
+            'siembras_con_datos': siembras_con_datos,
+            'dias_promedio_primer_corte': dias_promedio_primer_corte
+        },
+        'puntos_curva': puntos_curva
+    })
+
+@reportes.route('/curva_produccion_interactiva/<int:variedad_id>')
+@login_required
+def curva_produccion_interactiva(variedad_id):
+    """
+    Vista para la curva de producción interactiva usando React
+    """
+    # Obtener la variedad
+    variedad = Variedad.query.get_or_404(variedad_id)
+    
+    return render_template('reportes/curva_produccion_interactiva.html',
+                          title=f'Curva de Producción (Interactiva): {variedad.variedad}',
                           variedad=variedad,
-                          puntos_curva=puntos_curva,
-                          grafico_curva=grafico_curva)
+                          api_url=url_for('reportes.api_curva_produccion', variedad_id=variedad_id))
+
+# Añadir a app/reportes/routes.py
+
+@reportes.route('/diagnostico_importacion')
+@login_required
+def diagnostico_importacion():
+    """
+    Proporciona diagnóstico de los datos importados y ayuda a identificar problemas.
+    """
+    # Estadísticas generales
+    stats = {
+        'total_siembras': Siembra.query.count(),
+        'total_cortes': Corte.query.count(),
+        'total_variedades': Variedad.query.count(),
+        'total_bloques': Bloque.query.count(),
+        'total_camas': Cama.query.count()
+    }
+    
+    # Verificar siembras sin cortes
+    siembras_sin_cortes = Siembra.query.outerjoin(Corte).group_by(Siembra.siembra_id).having(func.count(Corte.corte_id) == 0).count()
+    
+    # Verificar cortes con valores de índice extremos
+    cortes_indices_altos = db.session.query(Corte).join(Siembra).join(Area).join(Densidad).filter(
+        (Corte.cantidad_tallos / (Area.area * Densidad.valor)) > 1.5  # Índice superior al 150%
+    ).count()
+    
+    # Verificar variedades con siembras
+    variedades_con_siembras = db.session.query(Variedad).join(Siembra).group_by(Variedad.variedad_id).count()
+    
+    # Obtener curvas de producción disponibles
+    variedades_con_curvas = []
+    for variedad in Variedad.query.all():
+        # Verificar si la variedad tiene datos suficientes para una curva
+        siembras = Siembra.query.filter_by(variedad_id=variedad.variedad_id).all()
+        total_cortes = 0
+        for siembra in siembras:
+            total_cortes += len(siembra.cortes)
+        
+        if total_cortes > 0:
+            variedades_con_curvas.append({
+                'variedad_id': variedad.variedad_id,
+                'variedad': variedad.variedad,
+                'flor': variedad.flor_color.flor.flor if variedad.flor_color else "Desconocida",
+                'color': variedad.flor_color.color.color if variedad.flor_color else "Desconocido",
+                'siembras': len(siembras),
+                'cortes': total_cortes
+            })
+    
+    # Ordenar por número de cortes (más datos primero)
+    variedades_con_curvas.sort(key=lambda x: x['cortes'], reverse=True)
+    
+    return render_template('reportes/diagnostico_importacion.html',
+                          title='Diagnóstico de Importación',
+                          stats=stats,
+                          siembras_sin_cortes=siembras_sin_cortes,
+                          cortes_indices_altos=cortes_indices_altos,
+                          variedades_con_siembras=variedades_con_siembras,
+                          variedades_con_curvas=variedades_con_curvas)
