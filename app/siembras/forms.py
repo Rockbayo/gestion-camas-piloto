@@ -19,6 +19,7 @@ class SiembraForm(FlaskForm):
     # Campos para la variedad y datos de siembra
     variedad_id = SelectField('Variedad', coerce=int, validators=[DataRequired()])
     fecha_siembra = DateField('Fecha de Siembra', format='%Y-%m-%d', validators=[DataRequired()])
+    fecha_fin_corte = DateField('Fecha de Fin de Corte', format='%Y-%m-%d', validators=[Optional()])
     
     # Campos para cálculo de área
     cantidad_plantas = IntegerField('Cantidad de Plantas', validators=[DataRequired(), NumberRange(min=1)])
