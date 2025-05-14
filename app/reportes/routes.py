@@ -876,19 +876,3 @@ def diagnostico_importacion():
                           variedades_con_siembras=variedades_con_siembras,
                           variedades_con_curvas=variedades_con_curvas)
 
-@reportes.route('/curva_produccion_interactiva/<int:variedad_id>')
-@login_required
-def curva_produccion_interactiva(variedad_id):
-    """
-    Vista para la curva de producción interactiva usando React
-    """
-    # Obtener la variedad
-    variedad = Variedad.query.get_or_404(variedad_id)
-    
-    # Construir la URL de la API
-    api_url = url_for('reportes.api_curva_produccion', variedad_id=variedad_id)
-    
-    return render_template('reportes/curva_produccion_interactiva.html',
-                          title=f'Curva de Producción (Interactiva): {variedad.variedad}',
-                          variedad=variedad,
-                          api_url=api_url)
