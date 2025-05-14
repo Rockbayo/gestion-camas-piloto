@@ -2,30 +2,28 @@
 import matplotlib
 matplotlib.use('Agg')  # Configurar backend no interactivo
 
-
 # Importar las librerías necesarias
-from flask import jsonify, render_template, request, send_file, url_for, current_app
-import json
-from flask_login import login_required
+from flask import render_template, flash, redirect, url_for, request, current_app
+from flask_login import login_required, current_user
+from sqlalchemy import func, desc
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
-from sqlalchemy import func, desc
 import numpy as np
-from io import BytesIO
-import base64
-import matplotlib.pyplot as plt
 from app import db
-from app.reportes import reportes
-from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
+from app.main import bp
+from app.models import (
+    Siembra, Corte, Variedad, Flor, Color, FlorColor, 
+    BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
+)
 
-@reportes.route('/')
+@bp.route('/')
 @login_required
 def index():
     return render_template('index.html', title='Inicio')
 
-@reportes.route('/dashboard')
+@bp.route('/dashboard')
 @login_required
 def dashboard():
     # Obtener estadísticas para el dashboard
@@ -90,7 +88,7 @@ def dashboard():
         buffer.seek(0)
         grafico_produccion = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
-        
+    
     # Crear gráfico de tendencias mensuales
     tendencia_mensual = None
     try:
