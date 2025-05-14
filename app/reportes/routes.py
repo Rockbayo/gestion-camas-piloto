@@ -20,9 +20,141 @@ from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
 from datetime import datetime, timedelta
 
-
-
-# Resto del código...
+def generar_grafico_curva(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_promedio):
+    """
+    Genera un gráfico mejorado para la curva de producción con suavizado adaptativo.
+    
+    Args:
+        puntos_curva: Lista de puntos de datos para la curva
+        variedad_info: Información de la variedad
+        ciclo_vegetativo_promedio: Promedio del ciclo vegetativo en días
+        ciclo_total_promedio: Promedio del ciclo total en días
+        
+    Returns:
+        String en base64 con el gráfico generado
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from io import BytesIO
+    import base64
+    from scipy.interpolate import make_interp_spline, BSpline
+    
+    # Extraer datos de puntos
+    dias = [punto['dia'] for punto in puntos_curva]
+    indices = [punto['indice_promedio'] for punto in puntos_curva]
+    
+    # Si hay muy pocos puntos, no intentar generar curva suavizada
+    if len(dias) < 4:
+        generate_smooth = False
+    else:
+        generate_smooth = True
+    
+    # Crear figura
+    plt.figure(figsize=(10, 6))
+    
+    # Gráfico de dispersión de los puntos reales
+    plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
+    
+    # Añadir línea que conecta los puntos (línea base)
+    plt.plot(dias, indices, 'b-', alpha=0.3)
+    
+    # Añadir línea suavizada si hay suficientes datos
+    if generate_smooth:
+        # Ordenar los puntos por día (importante para la interpolación)
+        sorted_points = sorted(zip(dias, indices))
+        sorted_dias = [p[0] for p in sorted_points]
+        sorted_indices = [p[1] for p in sorted_points]
+        
+        # Verificar si hay puntos duplicados y eliminarlos
+        unique_dias = []
+        unique_indices = []
+        last_dia = None
+        
+        for dia, indice in sorted_points:
+            if dia != last_dia:
+                unique_dias.append(dia)
+                unique_indices.append(indice)
+                last_dia = dia
+        
+        if len(unique_dias) >= 4:
+            # Usar spline cúbico natural para suavizado (menos agresivo que el polinómico)
+            try:
+                # Crear una malla más densa para el suavizado
+                dias_suavizados = np.linspace(min(unique_dias), max(unique_dias), 100)
+                
+                # Determinar el factor de suavizado basado en la cantidad de puntos
+                # Menos puntos = menos suavizado para evitar overfitting
+                k = min(3, len(unique_dias) - 1)  # k debe ser menor que el número de puntos
+                
+                # Crear el spline
+                spl = make_interp_spline(unique_dias, unique_indices, k=k)
+                indices_suavizados = spl(dias_suavizados)
+                
+                # Filtrar valores negativos (que no tienen sentido en índices)
+                indices_suavizados = np.maximum(indices_suavizados, 0)
+                
+                # Limitar el máximo a un valor razonable (150% es un máximo práctico)
+                max_sensible = max(indices) * 1.3
+                indices_suavizados = np.minimum(indices_suavizados, max_sensible)
+                
+                # Plotear línea suavizada
+                plt.plot(dias_suavizados, indices_suavizados, 'r--', linewidth=2, 
+                         label='Tendencia (suavizado natural)')
+            except Exception as e:
+                # Si hay algún problema con el spline, usar un método más robusto
+                try:
+                    # Ajuste polinómico con grado adaptativo
+                    poly_degree = min(2, len(dias) - 1)
+                    z = np.polyfit(dias, indices, poly_degree)
+                    p = np.poly1d(z)
+                    
+                    dias_suavizados = np.linspace(min(dias), max(dias), 100)
+                    indices_suavizados = p(dias_suavizados)
+                    
+                    plt.plot(dias_suavizados, indices_suavizados, 'r--', linewidth=2, 
+                            label=f'Tendencia (grado {poly_degree})')
+                except:
+                    print(f"Error al generar curva suavizada: {str(e)}")
+    
+    # Configurar gráfico
+    plt.xlabel('Días desde siembra')
+    plt.ylabel('Índice promedio (%)')
+    plt.title(f'Curva de producción: {variedad_info}')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # Limitar el rango del eje Y para visualización más clara
+    max_value = max(indices) if indices else 20
+    plt.ylim(0, min(50, max_value * 1.2))  # Limitar a 50% o 1.2 veces el máximo
+    
+    # Limitar el eje X al ciclo total promedio calculado
+    plt.xlim(0, ciclo_total_promedio)
+    
+    # Dibujar líneas verticales para mostrar los ciclos
+    if ciclo_vegetativo_promedio > 0:
+        plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7, 
+                   label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
+    
+    if ciclo_total_promedio > 0:
+        plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
+                   label=f'Fin ciclo total ({ciclo_total_promedio} días)')
+    
+    # Añadir anotaciones con los índices en cada punto
+    for i, (dia, indice) in enumerate(zip(dias, indices)):
+        plt.annotate(f'{indice}%', (dia, indice), 
+                    textcoords="offset points", 
+                    xytext=(0,10), 
+                    ha='center')
+    
+    # Guardar gráfico en formato base64
+    buffer = BytesIO()
+    plt.tight_layout()
+    plt.savefig(buffer, format='png', dpi=100)
+    buffer.seek(0)
+    grafico_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    plt.close()
+    
+    return grafico_base64
 
 @reportes.route('/')
 @login_required
@@ -573,80 +705,12 @@ def curva_produccion(variedad_id):
     # Generar el gráfico
     grafico_curva = None
     if puntos_curva:
-        import matplotlib.pyplot as plt
-        import numpy as np
-        from io import BytesIO
-        import base64
-        
-        # Datos para el gráfico
-        dias = [punto['dia'] for punto in puntos_curva]
-        indices = [punto['indice_promedio'] for punto in puntos_curva]
-        
-        # Si hay muy pocos puntos, no intentar generar curva de tendencia
-        generate_trend = len(dias) >= 3
-        
-        # Crear figura
-        plt.figure(figsize=(10, 6))
-        
-        # Gráfico de dispersión de los puntos reales
-        plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
-        
-        # Línea que conecta los puntos
-        plt.plot(dias, indices, 'b-', alpha=0.5)
-        
-        # Añadir línea de tendencia si hay suficientes datos
-        if generate_trend:
-            # Decidir el grado del polinomio según cantidad de datos
-            poly_degree = min(3, len(dias) - 1) if len(dias) <= 10 else 3
-            
-            # Calcular el polinomio
-            z = np.polyfit(dias, indices, poly_degree)
-            p = np.poly1d(z)
-            
-            # Generar puntos para la línea de tendencia
-            dias_suavizados = np.linspace(min(dias), max(dias), 100)
-            indices_suavizados = p(dias_suavizados)
-            
-            # Plotear línea de tendencia
-            plt.plot(dias_suavizados, indices_suavizados, 'r--', 
-                     label=f'Tendencia (grado {poly_degree})')
-        
-        # Configurar gráfico
-        plt.xlabel('Días desde siembra')
-        plt.ylabel('Índice promedio (%)')
-        plt.title(f'Curva de producción: {variedad.variedad}')
-        plt.grid(True, alpha=0.3)
-        plt.legend()
-        
-        # Limitar el rango del eje Y para visualización más clara
-        plt.ylim(0, min(150, max(indices) * 1.2 if indices else 100))  # Limitar a 150% o 1.2 veces el máximo
-        
-        # Limitar el eje X al ciclo total promedio calculado (máximo de 106 días)
-        plt.xlim(0, ciclo_total_promedio)
-        
-        # Dibujar líneas verticales para mostrar los ciclos
-        if ciclo_vegetativo_promedio > 0:
-            plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7, 
-                       label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
-        
-        if ciclo_total_promedio > 0:
-            plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
-                       label=f'Fin ciclo total ({ciclo_total_promedio} días)')
-        
-        # Añadir anotaciones con los índices en cada punto
-        for i, (dia, indice) in enumerate(zip(dias, indices)):
-            plt.annotate(f'{indice}%', (dia, indice), 
-                        textcoords="offset points", 
-                        xytext=(0,10), 
-                        ha='center')
-        
-        # Guardar gráfico en formato base64
-        buffer = BytesIO()
-        plt.tight_layout()
-        plt.savefig(buffer, format='png', dpi=100)
-        buffer.seek(0)
-        grafico_curva = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        plt.close()
+        grafico_curva = generar_grafico_curva(
+            puntos_curva, 
+            variedad.variedad,
+            ciclo_vegetativo_promedio,
+            ciclo_total_promedio
+        )
     
     # Datos adicionales para la plantilla
     datos_adicionales = {
