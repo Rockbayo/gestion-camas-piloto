@@ -17,7 +17,7 @@ import base64
 import matplotlib.pyplot as plt
 from app import db
 from app.reportes import reportes
-from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado
+from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
 
 
 
