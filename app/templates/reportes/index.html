@@ -59,6 +59,27 @@
            <h5 class="card-title mb-0">Curvas de Producción por Variedad</h5>
        </div>
        <div class="card-body">
+        <div class="row">
+            {% for variedad in variedades %}
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body text-center p-2">
+                        <h6 class="card-title mb-1">{{ variedad.variedad }}</h6>
+                        <p class="card-text text-muted small mb-2">{{ variedad.flor_color.flor.flor }} {{ variedad.flor_color.color.color }}</p>
+                        <div class="btn-group btn-group-sm w-100" role="group">
+                            <a href="{{ url_for('reportes.curva_produccion', variedad_id=variedad.variedad_id) }}" class="btn btn-outline-warning">
+                                <i class="fas fa-chart-line"></i> Estándar
+                            </a>
+                            <a href="{{ url_for('reportes.curva_produccion_interactiva', variedad_id=variedad.variedad_id) }}" class="btn btn-outline-info">
+                                <i class="fas fa-chart-area"></i> Interactiva
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+       <div class="card-body">
            <p>Las curvas de producción muestran el comportamiento de cada variedad a lo largo del tiempo, permitiendo predecir y optimizar los ciclos de corte.</p>
            
            <div class="row mb-3">
