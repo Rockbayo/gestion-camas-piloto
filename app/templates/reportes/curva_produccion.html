@@ -36,6 +36,30 @@
                     <p><strong>Índice de producción promedio:</strong> {{ datos_adicionales.promedio_produccion }}%</p>
                 </div>
             </div>
+            
+            <!-- Nueva sección de información de ciclos -->
+            <div class="alert alert-info mt-3">
+                <h5><i class="fas fa-info-circle"></i> Información de Ciclos</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Ciclo Vegetativo:</strong> {{ datos_adicionales.ciclo_vegetativo }} días</p>
+                        <p class="text-muted small">Desde siembra hasta primer corte</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Ciclo Productivo:</strong> {{ datos_adicionales.ciclo_productivo }} días</p>
+                        <p class="text-muted small">Desde primer corte hasta fin de corte</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Ciclo Total:</strong> {{ datos_adicionales.ciclo_total }} días</p>
+                        <p class="text-muted small">Desde siembra hasta fin de corte</p>
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle"></i> Nota: Esta variedad tiene un ciclo máximo histórico de {{ datos_adicionales.max_ciclo_historico }} días. Las curvas se limitan a este ciclo real para evitar datos atípicos.
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -46,7 +70,8 @@
         </div>
         <div class="card-body text-center">
             <img src="data:image/png;base64,{{ grafico_curva }}" class="img-fluid" alt="Curva de producción">
-            <p class="text-muted mt-2">Nota: La línea punteada representa la tendencia de producción ajustada.</p>
+            <p class="text-muted mt-2">Nota: La línea punteada roja representa la tendencia de producción ajustada.</p>
+            <p class="text-muted">Las líneas verticales representan el fin del ciclo vegetativo (verde) y el fin del ciclo total (rojo).</p>
         </div>
     </div>
     {% endif %}
@@ -104,6 +129,35 @@
         </div>
         <div class="card-body">
             <p>La curva de producción muestra el índice promedio de tallos producidos respecto al total de plantas sembradas, en función de los días transcurridos desde la siembra.</p>
+            
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="fas fa-seedling text-success"></i> Ciclo Vegetativo</h6>
+                            <p class="card-text">Periodo desde la siembra hasta el primer corte. En esta fase la planta crece y desarrolla su estructura.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="fas fa-leaf text-primary"></i> Ciclo Productivo</h6>
+                            <p class="card-text">Periodo desde el primer corte hasta el fin de corte. En esta fase la planta produce activamente.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title"><i class="fas fa-calendar-check text-danger"></i> Ciclo Total</h6>
+                            <p class="card-text">Periodo completo desde la siembra hasta el fin de corte. La curva se limita a este ciclo para mostrar datos reales.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h5>Elementos de la tabla:</h5>
             <ul>
                 <li><strong>Día desde siembra:</strong> Número de días transcurridos desde la fecha de siembra</li>
                 <li><strong>Índice promedio:</strong> Porcentaje promedio de tallos producidos respecto al total de plantas sembradas</li>

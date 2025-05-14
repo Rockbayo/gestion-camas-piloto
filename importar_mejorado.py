@@ -409,6 +409,30 @@ def importar_historico_mejorado(archivo_excel):
                             estado = estado_str
                     
                     # Crear siembra
+                    siembra = Siembra(  
+                        bloque_cama_id=bloque_cama.bloque_cama_id,
+                        variedad_id=variedad.variedad_id,
+                        area_id=area.area_id,
+                        densidad_id=densidad.densidad_id,
+                        fecha_siembra=fecha_siembra,
+                        fecha_inicio_corte=fecha_inicio_corte,
+                        estado=estado,
+                        usuario_id=usuario_id,
+                        fecha_registro=datetime.now()
+                    )
+
+                    # Obtener fecha fin de corte
+                    fecha_fin_corte = None
+                    fecha_fin_cols = ['FECHA FIN CORTE', 'FIN CORTE', 'FECHA FINAL']
+                    for col in fecha_fin_cols:
+                        if col in row.index and pd.notna(row[col]):
+                            try:
+                                fecha_fin_corte = pd.to_datetime(row[col]).date()
+                                break
+                            except:
+                                continue
+
+                    # Crear siembra con fecha_fin_corte
                     siembra = Siembra(
                         bloque_cama_id=bloque_cama.bloque_cama_id,
                         variedad_id=variedad.variedad_id,
@@ -416,6 +440,7 @@ def importar_historico_mejorado(archivo_excel):
                         densidad_id=densidad.densidad_id,
                         fecha_siembra=fecha_siembra,
                         fecha_inicio_corte=fecha_inicio_corte,
+                        fecha_fin_corte=fecha_fin_corte,  # Añadir fecha de fin de corte
                         estado=estado,
                         usuario_id=usuario_id,
                         fecha_registro=datetime.now()

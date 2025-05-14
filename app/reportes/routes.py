@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from app import db
 from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
+from datetime import datetime, timedelta
 
 
 
@@ -386,7 +387,7 @@ def exportar_datos():
 def curva_produccion(variedad_id):
     """
     Genera y muestra la curva de producción para una variedad específica,
-    basada en los datos históricos y actuales de siembras y cortes.
+    respetando su ciclo natural (vegetativo, productivo y total).
     """
     # Obtener la variedad
     variedad = Variedad.query.get_or_404(variedad_id)
@@ -402,6 +403,14 @@ def curva_produccion(variedad_id):
     # Estadísticas adicionales
     total_plantas = 0
     total_tallos = 0
+    
+    # Variables para calcular ciclos promedio
+    dias_ciclo_vegetativo = []
+    dias_ciclo_productivo = []
+    dias_ciclo_total = []
+    
+    # Valores extremos para filtrar
+    MAX_CICLO_TOTAL = 106  # Máximo ciclo total encontrado en históricos
     
     for siembra in siembras:
         if not siembra.fecha_siembra:
@@ -428,10 +437,60 @@ def curva_produccion(variedad_id):
         # Acumular estadísticas
         total_plantas += plantas_siembra
         
+        # Determinamos fechas para cálculo de ciclos
+        fecha_primer_corte = min([corte.fecha_corte for corte in siembra.cortes]) if siembra.cortes else None
+        
+        # Para el último corte, verificamos que esté dentro del ciclo máximo esperado
+        fecha_cortes_ordenados = sorted([corte.fecha_corte for corte in siembra.cortes]) if siembra.cortes else []
+        
+        # Determinar fecha fin de corte con validación de ciclo máximo
+        fecha_fin_corte = None
+        if hasattr(siembra, 'fecha_fin_corte') and siembra.fecha_fin_corte:
+            # Si hay fecha explícita, verificar que no exceda el ciclo máximo
+            dias_ciclo = (siembra.fecha_fin_corte - siembra.fecha_siembra).days
+            if dias_ciclo <= MAX_CICLO_TOTAL:
+                fecha_fin_corte = siembra.fecha_fin_corte
+            else:
+                # Si excede, usar una fecha calculada dentro del límite
+                fecha_fin_corte = siembra.fecha_siembra + timedelta(days=MAX_CICLO_TOTAL)
+        else:
+            # Sin fecha explícita, buscar el último corte dentro del ciclo máximo
+            cortes_validos = [corte.fecha_corte for corte in siembra.cortes 
+                            if (corte.fecha_corte - siembra.fecha_siembra).days <= MAX_CICLO_TOTAL]
+            if cortes_validos:
+                fecha_fin_corte = max(cortes_validos)
+            elif fecha_cortes_ordenados:
+                # Si no hay cortes dentro del límite pero hay otros cortes, usar el ciclo máximo
+                fecha_fin_corte = siembra.fecha_siembra + timedelta(days=MAX_CICLO_TOTAL)
+        
+        # Calcular duración de los ciclos si tenemos las fechas necesarias
+        if fecha_primer_corte and siembra.fecha_siembra:
+            ciclo_vegetativo = (fecha_primer_corte - siembra.fecha_siembra).days
+            if ciclo_vegetativo <= MAX_CICLO_TOTAL:  # Validar que sea razonable
+                dias_ciclo_vegetativo.append(ciclo_vegetativo)
+            
+        if fecha_primer_corte and fecha_fin_corte:
+            ciclo_productivo = (fecha_fin_corte - fecha_primer_corte).days
+            if ciclo_productivo <= MAX_CICLO_TOTAL:  # Validar que sea razonable
+                dias_ciclo_productivo.append(ciclo_productivo)
+            
+        if siembra.fecha_siembra and fecha_fin_corte:
+            ciclo_total = (fecha_fin_corte - siembra.fecha_siembra).days
+            if ciclo_total <= MAX_CICLO_TOTAL:  # Validar que sea razonable
+                dias_ciclo_total.append(ciclo_total)
+        
         # Procesamos cada corte
         for corte in siembra.cortes:
-            total_tallos += corte.cantidad_tallos
+            # Si el corte es posterior a la fecha_fin_corte calculada, omitirlo
+            if fecha_fin_corte and corte.fecha_corte > fecha_fin_corte:
+                continue
+                
+            # Verificar que el corte esté dentro del ciclo máximo
             dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
+            if dias_desde_siembra > MAX_CICLO_TOTAL:
+                continue
+                
+            total_tallos += corte.cantidad_tallos
             
             # Calculamos el índice para este corte
             indice = (corte.cantidad_tallos / plantas_siembra) * 100
@@ -442,10 +501,54 @@ def curva_produccion(variedad_id):
                 
             datos_curva[dias_desde_siembra].append(indice)
     
+    # Calcular ciclos promedio con filtrado de valores atípicos
+    def calcular_promedio_filtrado(lista_valores, percentil_min=10, percentil_max=90):
+        """Calcula promedio eliminando valores extremos por percentiles"""
+        if not lista_valores:
+            return 0
+        
+        # Si hay pocos valores, no filtrar
+        if len(lista_valores) < 5:
+            return int(sum(lista_valores) / len(lista_valores))
+            
+        # Ordenar valores
+        valores_ordenados = sorted(lista_valores)
+        
+        # Índices para recortar
+        idx_min = int(len(valores_ordenados) * (percentil_min / 100))
+        idx_max = int(len(valores_ordenados) * (percentil_max / 100))
+        
+        # Recortar valores extremos
+        valores_filtrados = valores_ordenados[idx_min:idx_max]
+        
+        # Calcular promedio
+        return int(sum(valores_filtrados) / len(valores_filtrados)) if valores_filtrados else 0
+    
+    # Calcular promedios filtrando valores extremos
+    ciclo_vegetativo_promedio = calcular_promedio_filtrado(dias_ciclo_vegetativo)
+    ciclo_productivo_promedio = calcular_promedio_filtrado(dias_ciclo_productivo)
+    ciclo_total_promedio = calcular_promedio_filtrado(dias_ciclo_total)
+    
+    # Aplicar límites máximos para los ciclos
+    max_ciclo_vegetativo = 45  # Valor ajustable según tus históricos
+    max_ciclo_productivo = 75  # Valor ajustable según tus históricos
+    
+    ciclo_vegetativo_promedio = min(ciclo_vegetativo_promedio, max_ciclo_vegetativo) if ciclo_vegetativo_promedio > 0 else max_ciclo_vegetativo
+    ciclo_productivo_promedio = min(ciclo_productivo_promedio, max_ciclo_productivo) if ciclo_productivo_promedio > 0 else max_ciclo_productivo
+    ciclo_total_promedio = min(ciclo_total_promedio, MAX_CICLO_TOTAL) if ciclo_total_promedio > 0 else MAX_CICLO_TOTAL
+    
+    # Asegurar que el ciclo total no exceda el máximo histórico
+    if ciclo_total_promedio == 0 or ciclo_total_promedio > MAX_CICLO_TOTAL:
+        ciclo_total_promedio = MAX_CICLO_TOTAL
+    
     # Calculamos los promedios para cada día
     puntos_curva = []
     for dia, indices in sorted(datos_curva.items()):
-        # Si hay muchos valores, filtrar outliers
+        # Si el día está más allá del ciclo total promedio, omitirlo
+        if dia > ciclo_total_promedio:
+            continue
+            
+        # Filtrar valores extremos en los índices
         if len(indices) >= 5:
             # Ordenar los valores
             indices.sort()
@@ -460,8 +563,8 @@ def curva_produccion(variedad_id):
             'dia': dia,
             'indice_promedio': round(indice_promedio, 2),
             'num_datos': len(indices),
-            'min_indice': round(min(indices), 2),
-            'max_indice': round(max(indices), 2)
+            'min_indice': round(min(indices), 2) if indices else 0,
+            'max_indice': round(max(indices), 2) if indices else 0
         })
     
     # Ordenar por día
@@ -518,6 +621,18 @@ def curva_produccion(variedad_id):
         # Limitar el rango del eje Y para visualización más clara
         plt.ylim(0, min(150, max(indices) * 1.2 if indices else 100))  # Limitar a 150% o 1.2 veces el máximo
         
+        # Limitar el eje X al ciclo total promedio calculado (máximo de 106 días)
+        plt.xlim(0, ciclo_total_promedio)
+        
+        # Dibujar líneas verticales para mostrar los ciclos
+        if ciclo_vegetativo_promedio > 0:
+            plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7, 
+                       label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
+        
+        if ciclo_total_promedio > 0:
+            plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
+                       label=f'Fin ciclo total ({ciclo_total_promedio} días)')
+        
         # Añadir anotaciones con los índices en cada punto
         for i, (dia, indice) in enumerate(zip(dias, indices)):
             plt.annotate(f'{indice}%', (dia, indice), 
@@ -539,7 +654,11 @@ def curva_produccion(variedad_id):
         'siembras_con_datos': siembras_con_datos,
         'total_plantas': total_plantas,
         'total_tallos': total_tallos,
-        'promedio_produccion': round((total_tallos / total_plantas * 100), 2) if total_plantas > 0 else 0
+        'promedio_produccion': round((total_tallos / total_plantas * 100), 2) if total_plantas > 0 else 0,
+        'ciclo_vegetativo': ciclo_vegetativo_promedio,
+        'ciclo_productivo': ciclo_productivo_promedio,
+        'ciclo_total': ciclo_total_promedio,
+        'max_ciclo_historico': MAX_CICLO_TOTAL
     }
     
     return render_template('reportes/curva_produccion.html',

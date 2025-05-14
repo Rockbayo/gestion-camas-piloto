@@ -26,6 +26,7 @@
                 <div class="col-md-6">
                     <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat }}</p>
                     <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte|dateformat }}</p>
+                    <p><strong>Fecha Fin de Corte:</strong> {{ siembra.fecha_fin_corte|dateformat }}</p>
                     <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
                     <p><strong>Días de Ciclo:</strong> {{ siembra.dias_ciclo }}</p>
                 </div>

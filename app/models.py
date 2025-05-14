@@ -245,6 +245,7 @@ class Siembra(db.Model):
     estado = db.Column(db.Enum('Activa', 'Finalizada'), nullable=False, default='Activa')
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
     fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fecha_fin_corte = db.Column(db.Date)  # Fecha explícita de fin de corte
     
     # Relaciones
     bloque_cama = db.relationship('BloqueCamaLado', backref='siembras')
@@ -272,14 +273,25 @@ class Siembra(db.Model):
     def total_tallos(self):
         return sum(corte.cantidad_tallos for corte in self.cortes)
     
-    @hybrid_property
-    def dias_ciclo(self):
-        """Calcula días desde la siembra hasta hoy o hasta el último corte"""
-        ultima_fecha = max([corte.fecha_corte for corte in self.cortes]) if self.cortes else datetime.now().date()
-        return (ultima_fecha - self.fecha_siembra).days
+@hybrid_property
+def dias_ciclo(self):
+    """
+    Calcula días desde la siembra hasta la fecha de fin de corte si está disponible,
+    de lo contrario usa el último corte o la fecha actual, con límite máximo.
+    """
+    if self.fecha_fin_corte:
+        # Si tenemos fecha explícita de fin de corte, usarla
+        dias = (self.fecha_fin_corte - self.fecha_siembra).days
+    elif self.cortes:
+        # Si no hay fecha fin pero hay cortes, usar el último corte
+        ultima_fecha = max([corte.fecha_corte for corte in self.cortes])
+        dias = (ultima_fecha - self.fecha_siembra).days
+    else:
+        # Si no hay cortes, usar la fecha actual
+        dias = (datetime.now().date() - self.fecha_siembra).days
     
-    def __repr__(self):
-        return f'<Siembra {self.siembra_id}>'
+    # Limitar a un máximo de 100 días (aproximadamente 3 meses)
+    return min(dias, 100)
 
 class Corte(db.Model):
     __tablename__ = 'cortes'

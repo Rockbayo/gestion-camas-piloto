@@ -279,6 +279,16 @@ def finalizar(id):
         flash('Esta siembra ya ha sido finalizada', 'warning')
         return redirect(url_for('siembras.index'))
     
+    # Establecer la fecha de fin de corte si no está establecida
+    if not siembra.fecha_fin_corte:
+        # Si hay cortes, usar la fecha del último corte
+        if siembra.cortes:
+            ultima_fecha = max([corte.fecha_corte for corte in siembra.cortes])
+            siembra.fecha_fin_corte = ultima_fecha
+        else:
+            # Si no hay cortes, usar la fecha actual
+            siembra.fecha_fin_corte = datetime.now().date()
+    
     siembra.estado = 'Finalizada'
     db.session.commit()
     flash('La siembra ha sido finalizada con éxito!', 'success')
