@@ -673,8 +673,7 @@ def curva_produccion(variedad_id):
 @login_required
 def api_curva_produccion(variedad_id):
     """
-    API para obtener datos de curva de producción en formato JSON.
-    Útil para visualizaciones interactivas mediante React u otras bibliotecas JS.
+    API para obtener datos de la curva de producción en formato JSON.
     """
     # Obtener la variedad
     variedad = Variedad.query.get_or_404(variedad_id)
@@ -682,95 +681,127 @@ def api_curva_produccion(variedad_id):
     # Obtener todas las siembras de esta variedad con sus cortes
     siembras = Siembra.query.filter_by(variedad_id=variedad_id).all()
     
-    # Preparar datos para la curva
-    datos_curva = {}  # Diccionario para agrupar por día desde siembra
-    total_siembras = 0
-    siembras_con_datos = 0
+    # Datos para la estructura de la respuesta
+    variedad_info = {
+        "id": variedad.variedad_id,
+        "nombre": variedad.variedad,
+        "flor": variedad.flor_color.flor.flor,
+        "color": variedad.flor_color.color.color
+    }
     
-    for siembra in siembras:
-        if not siembra.fecha_siembra:
-            continue
-            
-        # Calculamos el total de plantas para esta siembra
-        total_plantas = 0
-        if siembra.area and siembra.densidad:
-            total_plantas = int(siembra.area.area * siembra.densidad.valor)
-            
-        if total_plantas == 0:
-            continue
-        
-        # Incrementar contador de siembras válidas
-        total_siembras += 1
-        
-        # Verificar si tiene cortes
-        if not siembra.cortes:
-            continue
-            
-        # Incrementar contador de siembras con datos
-        siembras_con_datos += 1
-            
-        # Procesamos cada corte
-        for corte in siembra.cortes:
-            dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
-            
-            # Calculamos el índice para este corte
-            indice = (corte.cantidad_tallos / total_plantas) * 100
-            
-            # Agrupamos por día desde siembra
-            if dias_desde_siembra not in datos_curva:
-                datos_curva[dias_desde_siembra] = []
-                
-            datos_curva[dias_desde_siembra].append(indice)
+    # Estadísticas
+    estadisticas = {
+        "siembras_con_datos": 0,
+        "ciclo_vegetativo": 45,  # Valor predeterminado
+        "ciclo_total": 150       # Valor predeterminado
+    }
     
-    # Calculamos los promedios para cada día
+    # Puntos para la curva
     puntos_curva = []
-    for dia, indices in sorted(datos_curva.items()):
-        # Calcular el promedio, descartar valores atípicos si hay suficientes datos
-        if len(indices) >= 5:
-            # Ordenar los valores
-            indices.sort()
-            # Descartar el 10% de los valores extremos
-            num_descartar = int(len(indices) * 0.1)
-            indices_filtrados = indices[num_descartar:len(indices)-num_descartar]
-            indice_promedio = sum(indices_filtrados) / len(indices_filtrados)
-        else:
-            indice_promedio = sum(indices) / len(indices)
-            
-        puntos_curva.append({
-            'dia': dia,
-            'indice': round(max(indices), 2),  # Para visualizar el máximo como punto de referencia
-            'promedio': round(indice_promedio, 2),
-            'num_datos': len(indices)
+    
+    # Para calcular promedios de ciclos
+    dias_ciclo_vegetativo = []
+    
+    # Si no hay siembras, devolver estructura básica
+    if not siembras:
+        return jsonify({
+            "variedad": variedad_info,
+            "estadisticas": estadisticas,
+            "puntos_curva": []
         })
     
-    # Ordenar por día
-    puntos_curva.sort(key=lambda x: x['dia'])
-    
-    # Calcular días promedio al primer corte si hay datos suficientes
-    primer_corte_dias = []
+    # Procesar las siembras
     for siembra in siembras:
-        if siembra.fecha_siembra and siembra.fecha_inicio_corte:
-            dias = (siembra.fecha_inicio_corte - siembra.fecha_siembra).days
-            primer_corte_dias.append(dias)
+        if siembra.cortes:
+            estadisticas["siembras_con_datos"] += 1
+            
+            # Calcular ciclo vegetativo (días hasta primer corte)
+            if siembra.fecha_inicio_corte and siembra.fecha_siembra:
+                dias = (siembra.fecha_inicio_corte - siembra.fecha_siembra).days
+                dias_ciclo_vegetativo.append(dias)
     
-    dias_promedio_primer_corte = None
-    if primer_corte_dias:
-        dias_promedio_primer_corte = round(sum(primer_corte_dias) / len(primer_corte_dias), 1)
+    # Calcular ciclo vegetativo promedio
+    if dias_ciclo_vegetativo:
+        estadisticas["ciclo_vegetativo"] = int(sum(dias_ciclo_vegetativo) / len(dias_ciclo_vegetativo))
     
-    # Devolver datos en formato JSON
+    # Calcular días de cada corte y su valor promedio
+    cortes_por_dia = {}
+    
+    for siembra in siembras:
+        if siembra.cortes:
+            # Densidad y área para calcular índices
+            densidad = siembra.densidad.valor if siembra.densidad else 1.0
+            area = siembra.area.area if siembra.area else 1.0
+            total_plantas = int(area * densidad)
+            
+            # Si no hay plantas, continuar con la siguiente siembra
+            if total_plantas <= 0:
+                continue
+                
+            for corte in siembra.cortes:
+                # Calcular días desde siembra
+                dias = (corte.fecha_corte - siembra.fecha_siembra).days
+                
+                # Calcular índice (tallos / plantas)
+                indice = corte.cantidad_tallos / total_plantas
+                
+                # Agrupar por día
+                if dias not in cortes_por_dia:
+                    cortes_por_dia[dias] = {
+                        "indices": [],
+                        "num_corte": []
+                    }
+                
+                cortes_por_dia[dias]["indices"].append(indice)
+                cortes_por_dia[dias]["num_corte"].append(corte.num_corte)
+    
+    # Convertir datos agrupados a formato para la curva
+    for dia, datos in sorted(cortes_por_dia.items()):
+        indices = datos["indices"]
+        num_cortes = datos["num_corte"]
+        
+        if indices:
+            # Promedio de índices para este día
+            promedio = sum(indices) / len(indices)
+            # Moda del número de corte (el más frecuente)
+            from collections import Counter
+            contador = Counter(num_cortes)
+            num_corte_comun = contador.most_common(1)[0][0]
+            
+            # Crear punto para la curva
+            punto = {
+                "dia": dia,
+                "indice": max(indices),
+                "promedio": promedio,
+                "min": min(indices),
+                "max": max(indices),
+                "num_datos": len(indices),
+                "corte": f"C{num_corte_comun}"
+            }
+            
+            puntos_curva.append(punto)
+    
+    # Añadir punto inicial (siembra)
+    if puntos_curva:
+        puntos_curva.insert(0, {
+            "dia": 0,
+            "indice": 0,
+            "promedio": 0,
+            "min": 0,
+            "max": 0,
+            "num_datos": estadisticas["siembras_con_datos"],
+            "corte": "Siembra"
+        })
+    
+    # Calcular ciclo total
+    if puntos_curva and len(puntos_curva) > 1:
+        estadisticas["ciclo_total"] = puntos_curva[-1]["dia"]
+    
+    # Devolver resultado
     return jsonify({
-        'variedad': {
-            'id': variedad.variedad_id,
-            'nombre': variedad.variedad,
-            'flor': variedad.flor_color.flor.flor,
-            'color': variedad.flor_color.color.color
-        },
-        'estadisticas': {
-            'total_siembras': total_siembras,
-            'siembras_con_datos': siembras_con_datos,
-            'dias_promedio_primer_corte': dias_promedio_primer_corte
-        },
-        'puntos_curva': puntos_curva
+        "variedad": variedad_info,
+        "estadisticas": estadisticas,
+        "puntos_curva": puntos_curva
     })
 
 @reportes.route('/curva_produccion_interactiva/<int:variedad_id>')
@@ -844,3 +875,20 @@ def diagnostico_importacion():
                           cortes_indices_altos=cortes_indices_altos,
                           variedades_con_siembras=variedades_con_siembras,
                           variedades_con_curvas=variedades_con_curvas)
+
+@reportes.route('/curva_produccion_interactiva/<int:variedad_id>')
+@login_required
+def curva_produccion_interactiva(variedad_id):
+    """
+    Vista para la curva de producción interactiva usando React
+    """
+    # Obtener la variedad
+    variedad = Variedad.query.get_or_404(variedad_id)
+    
+    # Construir la URL de la API
+    api_url = url_for('reportes.api_curva_produccion', variedad_id=variedad_id)
+    
+    return render_template('reportes/curva_produccion_interactiva.html',
+                          title=f'Curva de Producción (Interactiva): {variedad.variedad}',
+                          variedad=variedad,
+                          api_url=api_url)
