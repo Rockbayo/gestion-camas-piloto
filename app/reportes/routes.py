@@ -128,7 +128,7 @@ def generar_grafico_curva(puntos_curva, variedad_info, ciclo_vegetativo_promedio
     plt.ylim(0, min(50, max_value * 1.2))  # Limitar a 50% o 1.2 veces el máximo
     
     # Limitar el eje X al ciclo total promedio calculado
-    plt.xlim(0, ciclo_total_promedio)
+    plt.xlim(0, min(ciclo_total_promedio * 1.1, 180))  # Agregar un 10% de margen, máximo 180 días
     
     # Dibujar líneas verticales para mostrar los ciclos
     if ciclo_vegetativo_promedio > 0:
@@ -521,6 +521,8 @@ def curva_produccion(variedad_id):
     Genera y muestra la curva de producción para una variedad específica,
     respetando su ciclo natural (vegetativo, productivo y total).
     """
+
+
     # Obtener la variedad
     variedad = Variedad.query.get_or_404(variedad_id)
     
@@ -535,6 +537,10 @@ def curva_produccion(variedad_id):
     # Estadísticas adicionales
     total_plantas = 0
     total_tallos = 0
+
+    ciclo_vegetativo_promedio = 45  # Valor predeterminado
+    ciclo_productivo_promedio = 60  # Valor predeterminado
+    ciclo_total_promedio = 120      # Valor predeterminado
     
     # Variables para calcular ciclos promedio
     dias_ciclo_vegetativo = []
@@ -619,7 +625,9 @@ def curva_produccion(variedad_id):
                 
             # Verificar que el corte esté dentro del ciclo máximo
             dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
-            if dias_desde_siembra > MAX_CICLO_TOTAL:
+            # Calcular un límite adaptativo basado en la variedad
+            limite_dias = min(ciclo_total_promedio * 1.2, 180)
+            if dias_desde_siembra > limite_dias:
                 continue
                 
             total_tallos += corte.cantidad_tallos
@@ -656,18 +664,63 @@ def curva_produccion(variedad_id):
         # Calcular promedio
         return int(sum(valores_filtrados) / len(valores_filtrados)) if valores_filtrados else 0
     
-    # Calcular promedios filtrando valores extremos
-    ciclo_vegetativo_promedio = calcular_promedio_filtrado(dias_ciclo_vegetativo)
-    ciclo_productivo_promedio = calcular_promedio_filtrado(dias_ciclo_productivo)
-    ciclo_total_promedio = calcular_promedio_filtrado(dias_ciclo_total)
-    
-    # Aplicar límites máximos para los ciclos
-    max_ciclo_vegetativo = 45  # Valor ajustable según tus históricos
-    max_ciclo_productivo = 75  # Valor ajustable según tus históricos
-    
-    ciclo_vegetativo_promedio = min(ciclo_vegetativo_promedio, max_ciclo_vegetativo) if ciclo_vegetativo_promedio > 0 else max_ciclo_vegetativo
-    ciclo_productivo_promedio = min(ciclo_productivo_promedio, max_ciclo_productivo) if ciclo_productivo_promedio > 0 else max_ciclo_productivo
-    ciclo_total_promedio = min(ciclo_total_promedio, MAX_CICLO_TOTAL) if ciclo_total_promedio > 0 else MAX_CICLO_TOTAL
+    # Función para filtrar valores atípicos usando el método IQR
+    def filtrar_outliers_iqr(valores, factor=1.5):
+        """Filtra valores atípicos usando el método IQR"""
+        # No hay suficientes datos para aplicar IQR
+        if not valores or len(valores) < 4:
+            return valores
+            
+        # Ordenar valores
+        valores_ordenados = sorted(valores)
+        q1_idx = len(valores) // 4
+        q3_idx = (len(valores) * 3) // 4
+        
+        q1 = valores_ordenados[q1_idx]
+        q3 = valores_ordenados[q3_idx]
+        
+        iqr = q3 - q1
+        lower_bound = q1 - (factor * iqr)
+        upper_bound = q3 + (factor * iqr)
+        
+        return [v for v in valores if lower_bound <= v <= upper_bound]
+
+    # Calcular ciclos promedio con filtrado mejorado
+    dias_ciclo_vegetativo_filtrados = filtrar_outliers_iqr(dias_ciclo_vegetativo)
+    dias_ciclo_productivo_filtrados = filtrar_outliers_iqr(dias_ciclo_productivo)
+    dias_ciclo_total_filtrados = filtrar_outliers_iqr(dias_ciclo_total)
+
+    # Calcular promedios de los datos filtrados
+    if dias_ciclo_vegetativo_filtrados:
+        ciclo_vegetativo_promedio = int(sum(dias_ciclo_vegetativo_filtrados) / len(dias_ciclo_vegetativo_filtrados))
+    else:
+        ciclo_vegetativo_promedio = 45  # Valor por defecto
+
+    if dias_ciclo_productivo_filtrados:
+        ciclo_productivo_promedio = int(sum(dias_ciclo_productivo_filtrados) / len(dias_ciclo_productivo_filtrados))
+    else:
+        ciclo_productivo_promedio = 60  # Valor por defecto
+
+    if dias_ciclo_total_filtrados:
+        ciclo_total_promedio = int(sum(dias_ciclo_total_filtrados) / len(dias_ciclo_total_filtrados))
+    else:
+        ciclo_total_promedio = 110  # Valor por defecto
+
+    # Validar consistencia entre ciclos
+    # El ciclo vegetativo debe ser menor que el total
+    if ciclo_vegetativo_promedio >= ciclo_total_promedio:
+        ciclo_vegetativo_promedio = max(30, ciclo_total_promedio - 60)
+
+    # El ciclo total debe ser al menos el vegetativo + 30 días
+    if ciclo_total_promedio < ciclo_vegetativo_promedio + 30:
+        ciclo_total_promedio = ciclo_vegetativo_promedio + 30
+
+    # Asegurar que el ciclo productivo sea consistente
+    ciclo_productivo_promedio = ciclo_total_promedio - ciclo_vegetativo_promedio
+
+    # Mantener un máximo razonable para evitar datos extremos
+    MAX_CICLO_PERMITIDO = 180
+    ciclo_total_promedio = min(ciclo_total_promedio, MAX_CICLO_PERMITIDO)
     
     # Asegurar que el ciclo total no exceda el máximo histórico
     if ciclo_total_promedio == 0 or ciclo_total_promedio > MAX_CICLO_TOTAL:
@@ -676,8 +729,8 @@ def curva_produccion(variedad_id):
     # Calculamos los promedios para cada día
     puntos_curva = []
     for dia, indices in sorted(datos_curva.items()):
-        # Si el día está más allá del ciclo total promedio, omitirlo
-        if dia > ciclo_total_promedio:
+       # Si el día está demasiado lejos del ciclo total, omitirlo
+        if dia > min(ciclo_total_promedio * 1.2, 180):
             continue
             
         # Filtrar valores extremos en los índices
@@ -940,3 +993,140 @@ def diagnostico_importacion():
                           variedades_con_siembras=variedades_con_siembras,
                           variedades_con_curvas=variedades_con_curvas)
 
+def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_promedio):
+    """
+    Genera un gráfico mejorado para la curva de producción con interpolación y suavizado.
+    """
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from scipy.interpolate import make_interp_spline, splrep, splev
+    from io import BytesIO
+    import base64
+    
+    # 1. PREPROCESAMIENTO DE DATOS
+    # Verifica que haya suficientes datos
+    if not puntos_curva or len(puntos_curva) < 3:
+        # Crear un gráfico con mensaje de error si no hay suficientes datos
+        plt.figure(figsize=(10, 6))
+        plt.text(0.5, 0.5, "Datos insuficientes para generar curva", 
+                ha='center', va='center', fontsize=14)
+        plt.tight_layout()
+        buffer = BytesIO()
+        plt.savefig(buffer, format='png')
+        buffer.seek(0)
+        grafico_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close()
+        return grafico_base64
+    
+    # Extraer datos y ordenarlos
+    dias = []
+    indices = []
+    
+    for punto in sorted(puntos_curva, key=lambda p: p['dia']):
+        dias.append(punto['dia'])
+        indices.append(punto['indice_promedio'])
+    
+    # 2. AÑADIR PUNTOS SINTÉTICOS para mejorar la curva
+    # Punto inicial (siembra, día 0)
+    if min(dias) > 0:
+        dias.insert(0, 0)
+        indices.insert(0, 0)
+    
+    # Punto para el ciclo vegetativo (si no hay datos cercanos)
+    if ciclo_vegetativo_promedio > 0:
+        # Verificar si ya hay un punto cercano
+        tiene_punto_cercano = any(abs(d - ciclo_vegetativo_promedio) < 5 for d in dias)
+        if not tiene_punto_cercano:
+            # Calcular un valor razonable para el inicio de producción (5-10% del promedio)
+            promedio_indices = sum(indices) / len(indices) if indices else 0
+            valor_inicio = max(0.5, promedio_indices * 0.08)  # 8% del promedio o 0.5 mínimo
+            
+            # Encontrar dónde insertar
+            pos = 0
+            while pos < len(dias) and dias[pos] < ciclo_vegetativo_promedio:
+                pos += 1
+            
+            dias.insert(pos, ciclo_vegetativo_promedio)
+            indices.insert(pos, valor_inicio)
+    
+    # Reordenar datos después de añadir puntos
+    puntos_ordenados = sorted(zip(dias, indices))
+    dias = [p[0] for p in puntos_ordenados]
+    indices = [p[1] for p in puntos_ordenados]
+    
+    # 3. CREAR FIGURA
+    plt.figure(figsize=(10, 6))
+    
+    # Gráfico de dispersión (puntos reales)
+    plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
+    
+    # 4. GENERAR CURVA SUAVIZADA
+    # Solo intentar curva suavizada si hay suficientes puntos
+    if len(dias) >= 4:
+        try:
+            # Crear una malla más densa para el suavizado
+            dias_suavizados = np.linspace(0, ciclo_total_promedio, 100)
+            
+            # Usar splines con suavizado controlado
+            # El parámetro s controla el suavizado (mayor s = más suavizado)
+            tck = splrep(dias, indices, s=len(dias)/2)
+            indices_suavizados = splev(dias_suavizados, tck)
+            
+            # Asegurarse de que los valores tengan sentido (no negativos, sin picos extremos)
+            indices_suavizados = np.maximum(indices_suavizados, 0)  # No valores negativos
+            
+            # Limitar picos extremos
+            max_indice = max(indices) * 1.2  # Permitir hasta 20% más que el máximo observado
+            indices_suavizados = np.minimum(indices_suavizados, max_indice)
+            
+            # Curva suavizada
+            plt.plot(dias_suavizados, indices_suavizados, 'r--', 
+                    linewidth=2, label='Tendencia (suavizado natural)')
+        except Exception as e:
+            print(f"Error al generar curva suavizada: {e}")
+            # Si falla el suavizado, conectar los puntos con líneas simples
+            plt.plot(dias, indices, 'r--', linewidth=1.5, 
+                   label='Tendencia (interpolación lineal)')
+    
+    # 5. CONFIGURACIÓN DEL GRÁFICO
+    plt.xlabel('Días desde siembra')
+    plt.ylabel('Índice promedio (%)')
+    plt.title(f'Curva de producción: {variedad_info}')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # Establecer límites eje Y
+    max_value = max(indices) if indices else 20
+    plt.ylim(0, min(50, max_value * 1.2))  # Limitar a 50% o 1.2 veces el máximo
+    
+    # Establecer límites eje X - todo el ciclo
+    plt.xlim(0, ciclo_total_promedio)
+    
+    # 6. AÑADIR LÍNEAS VERTICALES para mostrar los ciclos
+    if ciclo_vegetativo_promedio > 0:
+        plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7,
+                   label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
+    
+    if ciclo_total_promedio > 0:
+        plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
+                   label=f'Fin ciclo total ({ciclo_total_promedio} días)')
+    
+    # 7. AÑADIR ANOTACIONES
+    for dia, indice in zip(dias, indices):
+        plt.annotate(f'{indice:.2f}%', (dia, indice), 
+                    textcoords="offset points", xytext=(0,10), ha='center')
+    
+    # 8. AÑADIR NOTA EXPLICATIVA
+    plt.figtext(0.5, 0.01, 
+               "Nota: La línea punteada roja representa la tendencia de producción ajustada.", 
+               ha='center', fontsize=9)
+    
+    # 9. GUARDAR GRÁFICO
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])  # Dejar espacio para la nota
+    buffer = BytesIO()
+    plt.savefig(buffer, format='png', dpi=100)
+    buffer.seek(0)
+    grafico_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    plt.close()
+    
+    return grafico_base64

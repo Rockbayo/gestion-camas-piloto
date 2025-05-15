@@ -1,14 +1,15 @@
+
 from app import create_app, db
 from sqlalchemy import text
 
 app = create_app()
-DIAS_MAX_CICLO = 180  # Establece un l√≠mite de 180 d√≠as para el ciclo
+DIAS_MAX_CICLO = 155  # Establece un lÌmite adaptativo para el ciclo
 
 with app.app_context():
     # Eliminar vista existente si existe
     db.session.execute(text("DROP VIEW IF EXISTS vista_produccion_por_dia"))
     
-    # Crear vista con l√≠mite de d√≠as de ciclo y fecha de fin de corte
+    # Crear vista con lÌmite de dÌas de ciclo y fecha de fin de corte
     sql_vista = f"""
     CREATE VIEW vista_produccion_por_dia AS
     SELECT 
@@ -40,4 +41,4 @@ with app.app_context():
     
     db.session.execute(text(sql_vista))
     db.session.commit()
-    print(f"Vista actualizada exitosamente con l√≠mite de {DIAS_MAX_CICLO} d√≠as")
+    print(f"Vista actualizada exitosamente con lÌmite de {DIAS_MAX_CICLO} dÌas")
