@@ -1,150 +1,159 @@
-# Configuración inicial (solo una vez al principio)
+# Primero configurar el backend antes de importar pyplot
 import matplotlib
 matplotlib.use('Agg')  # Configurar backend no interactivo
 
-# Standard library imports
-from datetime import datetime, timedelta
+# Resto de las importaciones
+from flask import jsonify, render_template, request, send_file, url_for, current_app
+import json
+from flask_login import login_required
+import pandas as pd
+import matplotlib.pyplot as plt
 from io import BytesIO
 import base64
-import json
-
-# Third-party imports
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from flask import jsonify, render_template, request, send_file, url_for, current_app
-from flask_login import login_required
 from sqlalchemy import func, desc
-
-# Local application imports
+import numpy as np
+from io import BytesIO
+import base64
+import matplotlib.pyplot as plt
 from app import db
 from app.reportes import reportes
 from app.models import Siembra, Corte, Variedad, Flor, Color, FlorColor, BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
+from datetime import datetime, timedelta
 
-# Intento de importación de scipy (solo una vez)
-SCIPY_AVAILABLE = False
-try:
-    from scipy.interpolate import make_interp_spline, splrep, splev
-    SCIPY_AVAILABLE = True
-except ImportError:
-    current_app.logger.warning("Scipy no está instalado. La generación de curvas suavizadas estará limitada.")
-
-# Configuración
-def get_config_value(key, default):
-    """Obtiene valores de configuración de forma segura"""
-    try:
-        return current_app.config.get(key, default)
-    except RuntimeError:  # Para cuando no hay contexto de aplicación
-        return default
-
-MAXIMO_CICLO_ABSOLUTO = get_config_value('MAXIMO_CICLO_ABSOLUTO', 93)
-SUAVIZADO_MINIMO_PUNTOS = get_config_value('SUAVIZADO_MINIMO_PUNTOS', 4)
-
-def generar_grafico_curva_optimizado(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_maximo):
+def generar_grafico_curva(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_promedio):
     """
-    Versión optimizada de la función para generar gráficos de curva de producción.
+    Genera un gráfico mejorado para la curva de producción con suavizado adaptativo.
     
     Args:
-        puntos_curva: Lista de puntos {dia, indice_promedio, ...}
-        variedad_info: Nombre de la variedad para el título
-        ciclo_vegetativo_promedio: Días promedio del ciclo vegetativo
-        ciclo_total_maximo: Días promedio del ciclo total
+        puntos_curva: Lista de puntos de datos para la curva
+        variedad_info: Información de la variedad
+        ciclo_vegetativo_promedio: Promedio del ciclo vegetativo en días
+        ciclo_total_promedio: Promedio del ciclo total en días
         
     Returns:
-        Imagen codificada en base64 del gráfico generado o None si hay error
+        String en base64 con el gráfico generado
     """
-    try:
-        # Verificar datos mínimos
-        if not puntos_curva or len(puntos_curva) < 3:
-            return generar_grafico_error("Datos insuficientes para generar curva")
-        
-        # Filtrar puntos más allá del ciclo total
-        puntos_filtrados = [p for p in puntos_curva if p['dia'] <= ciclo_total_maximo]
-        if not puntos_filtrados:
-            return generar_grafico_error("No hay datos dentro del ciclo de producción")
-        
-        # Extraer datos
-        dias = np.array([p['dia'] for p in puntos_filtrados])
-        indices = np.array([p['indice_promedio'] for p in puntos_filtrados])
-        
-        # Configurar figura
-        plt.figure(figsize=(10, 6))
-        
-        # Gráfico de dispersión
-        plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
-        
-        # Suavizado condicional
-        if len(dias) >= 4 and SCIPY_AVAILABLE:
-            try:
-                dias_suavizados = np.linspace(0, ciclo_total_maximo, 100)
-                s_factor = len(dias) / 3  # Factor de suavizado adaptativo
-                
-                tck = splrep(dias, indices, s=s_factor)
-                indices_suavizados = splev(dias_suavizados, tck)
-                
-                # Asegurar valores razonables
-                indices_suavizados = np.clip(indices_suavizados, 0, max(indices) * 1.2)
-                
-                plt.plot(dias_suavizados, indices_suavizados, 'r--', linewidth=2, 
-                        label='Tendencia (suavizado natural)')
-            except Exception as e:
-                current_app.logger.warning(f"Error en suavizado: {str(e)}")
-                plt.plot(dias, indices, 'r--', linewidth=1.5, 
-                         label='Tendencia (interpolación lineal)')
-        
-        # Configuración del gráfico
-        plt.xlabel('Días desde siembra')
-        plt.ylabel('Índice promedio (%)')
-        plt.title(f'Curva de producción: {variedad_info[:50]}')  # Limitar longitud del título
-        plt.grid(True, alpha=0.3)
-        plt.legend()
-        
-        # Límites de ejes
-        max_y = min(50, max(indices) * 1.2) if indices else 20
-        plt.ylim(0, max_y)
-        plt.xlim(0, ciclo_total_maximo)
-        
-        # Líneas de ciclo
-        plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7,
-                   label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
-        plt.axvline(x=ciclo_total_maximo, color='r', linestyle='--', alpha=0.7,
-                   label=f'Fin ciclo total ({ciclo_total_maximo} días)')
-        
-        # Anotaciones
-        for p in puntos_filtrados:
-            if p['num_datos'] > 1:
-                plt.annotate(f'{p["indice_promedio"]:.2f}%', 
-                            (p['dia'], p['indice_promedio']), 
-                            textcoords="offset points", 
-                            xytext=(0,10), 
-                            ha='center')
-        
-        # Nota al pie
-        plt.figtext(0.5, 0.01, 
-                   "Nota: La línea punteada roja representa la tendencia de producción ajustada.", 
-                   ha='center', fontsize=9)
-        
-        # Guardar y retornar
-        return guardar_grafico_a_base64()
-        
-    except Exception as e:
-        current_app.logger.error(f"Error generando gráfico: {str(e)}")
-        return generar_grafico_error("Error al generar el gráfico")
-
-def generar_grafico_error(mensaje):
-    """Genera un gráfico de error con el mensaje especificado"""
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from io import BytesIO
+    import base64
+    from scipy.interpolate import make_interp_spline, BSpline
+    
+    # Extraer datos de puntos
+    dias = [punto['dia'] for punto in puntos_curva]
+    indices = [punto['indice_promedio'] for punto in puntos_curva]
+    
+    # Si hay muy pocos puntos, no intentar generar curva suavizada
+    if len(dias) < 4:
+        generate_smooth = False
+    else:
+        generate_smooth = True
+    
+    # Crear figura
     plt.figure(figsize=(10, 6))
-    plt.text(0.5, 0.5, mensaje, ha='center', va='center', fontsize=14)
-    plt.tight_layout()
-    return guardar_grafico_a_base64()
-
-def guardar_grafico_a_base64():
-    """Guarda el gráfico actual en un buffer y lo convierte a base64"""
+    
+    # Gráfico de dispersión de los puntos reales
+    plt.scatter(dias, indices, color='blue', s=50, alpha=0.7, label='Datos históricos')
+    
+    # Añadir línea que conecta los puntos (línea base)
+    plt.plot(dias, indices, 'b-', alpha=0.3)
+    
+    # Añadir línea suavizada si hay suficientes datos
+    if generate_smooth:
+        # Ordenar los puntos por día (importante para la interpolación)
+        sorted_points = sorted(zip(dias, indices))
+        sorted_dias = [p[0] for p in sorted_points]
+        sorted_indices = [p[1] for p in sorted_points]
+        
+        # Verificar si hay puntos duplicados y eliminarlos
+        unique_dias = []
+        unique_indices = []
+        last_dia = None
+        
+        for dia, indice in sorted_points:
+            if dia != last_dia:
+                unique_dias.append(dia)
+                unique_indices.append(indice)
+                last_dia = dia
+        
+        if len(unique_dias) >= 4:
+            # Usar spline cúbico natural para suavizado (menos agresivo que el polinómico)
+            try:
+                # Crear una malla más densa para el suavizado
+                dias_suavizados = np.linspace(min(unique_dias), max(unique_dias), 100)
+                
+                # Determinar el factor de suavizado basado en la cantidad de puntos
+                # Menos puntos = menos suavizado para evitar overfitting
+                k = min(3, len(unique_dias) - 1)  # k debe ser menor que el número de puntos
+                
+                # Crear el spline
+                spl = make_interp_spline(unique_dias, unique_indices, k=k)
+                indices_suavizados = spl(dias_suavizados)
+                
+                # Filtrar valores negativos (que no tienen sentido en índices)
+                indices_suavizados = np.maximum(indices_suavizados, 0)
+                
+                # Limitar el máximo a un valor razonable (150% es un máximo práctico)
+                max_sensible = max(indices) * 1.3
+                indices_suavizados = np.minimum(indices_suavizados, max_sensible)
+                
+                # Plotear línea suavizada
+                plt.plot(dias_suavizados, indices_suavizados, 'r--', linewidth=2, 
+                         label='Tendencia (suavizado natural)')
+            except Exception as e:
+                # Si hay algún problema con el spline, usar un método más robusto
+                try:
+                    # Ajuste polinómico con grado adaptativo
+                    poly_degree = min(2, len(dias) - 1)
+                    z = np.polyfit(dias, indices, poly_degree)
+                    p = np.poly1d(z)
+                    
+                    dias_suavizados = np.linspace(min(dias), max(dias), 100)
+                    indices_suavizados = p(dias_suavizados)
+                    
+                    plt.plot(dias_suavizados, indices_suavizados, 'r--', linewidth=2, 
+                            label=f'Tendencia (grado {poly_degree})')
+                except:
+                    print(f"Error al generar curva suavizada: {str(e)}")
+    
+    # Configurar gráfico
+    plt.xlabel('Días desde siembra')
+    plt.ylabel('Índice promedio (%)')
+    plt.title(f'Curva de producción: {variedad_info}')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # Limitar el rango del eje Y para visualización más clara
+    max_value = max(indices) if indices else 20
+    plt.ylim(0, min(50, max_value * 1.2))  # Limitar a 50% o 1.2 veces el máximo
+    
+    # Limitar el eje X al ciclo total promedio calculado
+    plt.xlim(0, min(ciclo_total_promedio * 1.1, 180))  # Agregar un 10% de margen, máximo 180 días
+    
+    # Dibujar líneas verticales para mostrar los ciclos
+    if ciclo_vegetativo_promedio > 0:
+        plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7, 
+                   label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
+    
+    if ciclo_total_promedio > 0:
+        plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
+                   label=f'Fin ciclo total ({ciclo_total_promedio} días)')
+    
+    # Añadir anotaciones con los índices en cada punto
+    for i, (dia, indice) in enumerate(zip(dias, indices)):
+        plt.annotate(f'{indice}%', (dia, indice), 
+                    textcoords="offset points", 
+                    xytext=(0,10), 
+                    ha='center')
+    
+    # Guardar gráfico en formato base64
     buffer = BytesIO()
+    plt.tight_layout()
     plt.savefig(buffer, format='png', dpi=100)
     buffer.seek(0)
     grafico_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
     plt.close()
+    
     return grafico_base64
 
 @reportes.route('/')
@@ -160,74 +169,28 @@ def index():
     return render_template('reportes/index.html', 
                           title='Reportes', 
                           variedades=variedades_con_siembras)
-def obtener_datos_variedad(variedad_id):
-    """Obtiene datos consolidados para una variedad específica"""
-    # Consulta optimizada para obtener información de la variedad
-    variedad = db.session.query(
-        Variedad.variedad_id,
-        Variedad.variedad,
-        Flor.flor,
-        Color.color
-    ).join(
-        FlorColor, Variedad.flor_color_id == FlorColor.flor_color_id
-    ).join(
-        Flor, FlorColor.flor_id == Flor.flor_id
-    ).join(
-        Color, FlorColor.color_id == Color.color_id
-    ).filter(
-        Variedad.variedad_id == variedad_id
-    ).first()
-    
-    if not variedad:
-        return None
-    
-    # Consulta para siembras y cortes de esta variedad
-    siembras = db.session.query(
-        Siembra.siembra_id,
-        Siembra.fecha_siembra,
-        Siembra.fecha_inicio_corte,
-        func.count(Corte.corte_id).label('total_cortes'),
-        func.min(Corte.fecha_corte).label('primer_corte'),
-        func.max(Corte.fecha_corte).label('ultimo_corte'),
-        Area.area,
-        Densidad.valor.label('densidad')
-    ).outerjoin(
-        Corte, Siembra.siembra_id == Corte.siembra_id
-    ).join(
-        Area, Siembra.area_id == Area.area_id
-    ).join(
-        Densidad, Siembra.densidad_id == Densidad.densidad_id
-    ).filter(
-        Siembra.variedad_id == variedad_id,
-        Siembra.fecha_siembra.isnot(None)
-    ).group_by(
-        Siembra.siembra_id,
-        Area.area,
-        Densidad.valor
-    ).all()
-    
-    return {
-        'variedad': variedad,
-        'siembras': siembras
-    }
 
 @reportes.route('/produccion_por_variedad')
 @login_required
 def produccion_por_variedad():
-    # Consulta optimizada con joins explícitos
+    # Consulta SQL para obtener la producción por variedad
     results = db.session.query(
         Variedad.variedad_id,
         Variedad.variedad,
         Flor.flor,
         Color.color,
         func.sum(Corte.cantidad_tallos).label('total_tallos')
-    ).select_from(Corte)\
-     .join(Siembra, Corte.siembra_id == Siembra.siembra_id)\
-     .join(Variedad, Siembra.variedad_id == Variedad.variedad_id)\
-     .join(FlorColor, Variedad.flor_color_id == FlorColor.flor_color_id)\
-     .join(Flor, FlorColor.flor_id == Flor.flor_id)\
-     .join(Color, FlorColor.color_id == Color.color_id)\
-     .group_by(
+    ).join(
+        Corte.siembra
+    ).join(
+        Siembra.variedad
+    ).join(
+        Variedad.flor_color
+    ).join(
+        FlorColor.flor
+    ).join(
+        FlorColor.color
+    ).group_by(
         Variedad.variedad_id,
         Variedad.variedad,
         Flor.flor,
@@ -337,119 +300,85 @@ def produccion_por_bloque():
 @reportes.route('/dias_produccion')
 @login_required
 def dias_produccion():
-    """Obtiene estadísticas de días desde siembra hasta corte por variedad y número de corte.
+    # Consulta SQL para obtener días desde siembra hasta corte
+    results = db.session.query(
+        Variedad.variedad_id,
+        Variedad.variedad,
+        Flor.flor,
+        Color.color,
+        Corte.num_corte,
+        func.avg(func.datediff(Corte.fecha_corte, Siembra.fecha_siembra)).label('dias_promedio'),
+        func.min(func.datediff(Corte.fecha_corte, Siembra.fecha_siembra)).label('dias_minimo'),
+        func.max(func.datediff(Corte.fecha_corte, Siembra.fecha_siembra)).label('dias_maximo'),
+        func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
+    ).join(
+        Corte.siembra
+    ).join(
+        Siembra.variedad
+    ).join(
+        Variedad.flor_color
+    ).join(
+        FlorColor.flor
+    ).join(
+        FlorColor.color
+    ).group_by(
+        Variedad.variedad_id,
+        Variedad.variedad,
+        Flor.flor,
+        Color.color,
+        Corte.num_corte
+    ).order_by(
+        Variedad.variedad,
+        Corte.num_corte
+    ).all()
     
-    Returns:
-        Renderiza template con datos organizados por variedad y gráficos de tendencia.
-    """
-    try:
-        # Consulta SQL optimizada para obtener días desde siembra hasta corte
-        results = db.session.query(
-            Variedad.variedad_id,
-            Variedad.variedad,
-            Flor.flor,
-            Color.color,
-            Corte.num_corte,
-            func.avg(
-                func.datediff(
-                    func.ifnull(Corte.fecha_corte, datetime.now()),
-                    func.ifnull(Siembra.fecha_siembra, datetime.now())
-                )
-            ).label('dias_promedio'),
-            func.min(
-                func.datediff(Corte.fecha_corte, Siembra.fecha_siembra)
-            ).label('dias_minimo'),
-            func.max(
-                func.datediff(Corte.fecha_corte, Siembra.fecha_siembra)
-            ).label('dias_maximo'),
-            func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
-        ).join(
-            Corte.siembra
-        ).join(
-            Siembra.variedad
-        ).join(
-            Variedad.flor_color
-        ).join(
-            FlorColor.flor
-        ).join(
-            FlorColor.color
-        ).filter(
-            Siembra.fecha_siembra.isnot(None),
-            Corte.fecha_corte.isnot(None)
-        ).group_by(
-            Variedad.variedad_id,
-            Variedad.variedad,
-            Flor.flor,
-            Color.color,
-            Corte.num_corte
-        ).order_by(
-            Variedad.variedad,
-            Corte.num_corte
-        ).all()
-
-        # Organizar datos por variedad y número de corte
-        data_dict = {}
-        for r in results:
-            variedad_key = f"{r.variedad} ({r.flor} - {r.color})"
-            if variedad_key not in data_dict:
-                data_dict[variedad_key] = []
-            
-            data_dict[variedad_key].append({
-                'num_corte': r.num_corte,
-                'dias_promedio': round(r.dias_promedio, 1) if r.dias_promedio is not None else 0,
-                'dias_minimo': r.dias_minimo if r.dias_minimo is not None else 0,
-                'dias_maximo': r.dias_maximo if r.dias_maximo is not None else 0,
-                'total_siembras': r.total_siembras if r.total_siembras is not None else 0
-            })
-
-        # Preparar gráficos solo si hay datos
+    # Organizar datos por variedad y número de corte
+    data_dict = {}
+    for r in results:
+        variedad_key = f"{r.variedad} ({r.flor} - {r.color})"
+        if variedad_key not in data_dict:
+            data_dict[variedad_key] = []
+        
+        data_dict[variedad_key].append({
+            'num_corte': r.num_corte,
+            'dias_promedio': round(r.dias_promedio, 1),
+            'dias_minimo': r.dias_minimo,
+            'dias_maximo': r.dias_maximo,
+            'total_siembras': r.total_siembras
+        })
+    
+    # Preparar gráficos
+    if data_dict:
         graficos = {}
-        if data_dict:
-            for variedad, cortes in data_dict.items():
-                if not cortes:
-                    continue
-                    
-                # Limitar a los primeros 10 cortes para el gráfico
-                cortes_datos = cortes[:10]
-                
-                # Crear gráfico con matplotlib
-                plt.figure(figsize=(10, 6))
-                plt.bar(
-                    [f"Corte {c['num_corte']}" for c in cortes_datos], 
-                    [c['dias_promedio'] for c in cortes_datos],
-                    color='skyblue'
-                )
-                
-                # Añadir línea de tendencia
-                if len(cortes_datos) > 1:
-                    x = range(len(cortes_datos))
-                    y = [c['dias_promedio'] for c in cortes_datos]
-                    z = np.polyfit(x, y, 1)
-                    p = np.poly1d(z)
-                    plt.plot(x, p(x), "r--")
-                
-                plt.xlabel('Número de Corte')
-                plt.ylabel('Días Promedio')
-                plt.title(f'Días Promedio por Corte: {variedad[:50]}')  # Limitar longitud del título
-                plt.xticks(rotation=45)
-                plt.tight_layout()
-                
-                # Guardar gráfico en formato base64
-                buffer = BytesIO()
-                plt.savefig(buffer, format='png', dpi=100)
-                buffer.seek(0)
-                graficos[variedad] = base64.b64encode(buffer.getvalue()).decode('utf-8')
-                plt.close()
-
-        return render_template('reportes/dias_produccion.html', 
-                            title='Días de Producción', 
-                            data=data_dict, 
-                            graficos=graficos)
-
-    except Exception as e:
-        current_app.logger.error(f"Error en dias_produccion: {str(e)}")
-        return render_template('error.html', 
-                            message="Ocurrió un error al generar el reporte de días de producción"), 500
+        
+        for variedad, cortes in data_dict.items():
+            # Limitar a los primeros 5 cortes para el gráfico
+            cortes_datos = cortes[:5]
+            
+            # Crear gráfico con matplotlib
+            plt.figure(figsize=(8, 5))
+            plt.bar(
+                [f"Corte {c['num_corte']}" for c in cortes_datos], 
+                [c['dias_promedio'] for c in cortes_datos]
+            )
+            plt.xlabel('Número de Corte')
+            plt.ylabel('Días Promedio')
+            plt.title(f'Días Promedio por Corte: {variedad}')
+            plt.tight_layout()
+            
+            # Guardar gráfico en formato base64
+            buffer = BytesIO()
+            plt.savefig(buffer, format='png')
+            buffer.seek(0)
+            graficos[variedad] = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            plt.close()
+    else:
+        graficos = None
+    
+    return render_template('reportes/dias_produccion.html', 
+                          title='Días de Producción', 
+                          data=data_dict, 
+                          graficos=graficos)
 
 @reportes.route('/exportar_datos')
 @login_required
@@ -592,16 +521,18 @@ def curva_produccion(variedad_id):
     Genera y muestra la curva de producción específica para una variedad,
     utilizando datos históricos para determinar su ciclo natural.
     """
-    # Código existente para obtener la variedad y sus siembras
+    # Obtener la variedad solicitada
     variedad = Variedad.query.get_or_404(variedad_id)
+    
+    # Obtener todas las siembras de esta variedad con sus cortes
     siembras = Siembra.query.filter_by(variedad_id=variedad_id).all()
     
-    # Variables para datos acumulados (mantén tu código existente)
+    # Variables para almacenar los totales y datos acumulados
     total_siembras = 0
     siembras_con_datos = 0
     total_plantas = 0
     total_tallos = 0
-    datos_curva = {}
+    datos_curva = {}  # {día: [índices...]}
     ciclos_vegetativos = []
     ciclos_totales = []
     
@@ -657,27 +588,29 @@ def curva_produccion(variedad_id):
     
     # Función para filtrar valores atípicos utilizando el método IQR
     def filtrar_outliers_iqr(valores, factor=1.5):
-        """Filtra valores atípicos usando el rango intercuartil (IQR) con mejor manejo de casos límite"""
+        """Filtra valores atípicos usando el rango intercuartil (IQR)"""
         if not valores or len(valores) < 5:  # Necesitamos suficientes datos
             return valores
             
-        # Convertir a numpy array para operaciones vectorizadas
-        valores_arr = np.array(valores)
+        # Ordenar los valores para calcular cuartiles
+        valores_ordenados = sorted(valores)
+        n = len(valores_ordenados)
         
-        # Calcular cuartiles
-        q1 = np.percentile(valores_arr, 25)
-        q3 = np.percentile(valores_arr, 75)
+        # Calcular posiciones de cuartiles (Q1 = 25%, Q3 = 75%)
+        q1_idx = int(n * 0.25)
+        q3_idx = int(n * 0.75)
         
-        # Calcular IQR y límites
+        # Obtener valores de cuartiles
+        q1 = valores_ordenados[q1_idx]
+        q3 = valores_ordenados[q3_idx]
+        
+        # Calcular IQR y límites para filtrado
         iqr = q3 - q1
-        if iqr == 0:  # Si todos los valores son iguales
-            return valores
-            
         limite_inferior = q1 - (factor * iqr)
         limite_superior = q3 + (factor * iqr)
         
         # Filtrar valores dentro de los límites
-        return valores_arr[(valores_arr >= limite_inferior) & (valores_arr <= limite_superior)].tolist()
+        return [v for v in valores if limite_inferior <= v <= limite_superior]
     
     # Calcular ciclos promedio con valores filtrados
     ciclos_vegetativos_filtrados = filtrar_outliers_iqr(ciclos_vegetativos)
@@ -694,33 +627,33 @@ def curva_produccion(variedad_id):
     ciclo_total_maximo_real = max(ciclos_totales) if ciclos_totales else 90
     
     if ciclos_totales_filtrados:
-        ciclo_total_maximo = int(sum(ciclos_totales_filtrados) / len(ciclos_totales_filtrados))
+        ciclo_total_promedio = int(sum(ciclos_totales_filtrados) / len(ciclos_totales_filtrados))
     else:
         # Valor predeterminado basado en análisis global
-        ciclo_total_maximo = 84
+        ciclo_total_promedio = 84
     
     # CAMBIO 2: Asegurar que el ciclo total nunca exceda el máximo real observado
-    ciclo_total_maximo = min(ciclo_total_maximo, ciclo_total_maximo_real)
+    ciclo_total_promedio = min(ciclo_total_promedio, ciclo_total_maximo_real)
     
     # IMPORTANTE: Nunca permitir que el ciclo total sea mayor al máximo observado
     # En el análisis se vio que el máximo es 93 días (este valor debería ser dinámico)
     MAXIMO_CICLO_ABSOLUTO = 93
-    ciclo_total_maximo = min(ciclo_total_maximo, MAXIMO_CICLO_ABSOLUTO)
+    ciclo_total_promedio = min(ciclo_total_promedio, MAXIMO_CICLO_ABSOLUTO)
     
     # Validar coherencia entre los ciclos
-    if ciclo_vegetativo_promedio >= ciclo_total_maximo:
+    if ciclo_vegetativo_promedio >= ciclo_total_promedio:
         # Ajustar ciclo vegetativo para mantener coherencia
-        ciclo_vegetativo_promedio = max(45, ciclo_total_maximo - 10)
+        ciclo_vegetativo_promedio = max(45, ciclo_total_promedio - 10)
     
     # Calcular ciclo productivo
-    ciclo_productivo_promedio = ciclo_total_maximo - ciclo_vegetativo_promedio
+    ciclo_productivo_promedio = ciclo_total_promedio - ciclo_vegetativo_promedio
     
-
+    # CAMBIO 3: IMPORTANTE - Filtrar puntos del análisis que excedan el ciclo real
     # Eliminar puntos más allá del ciclo total + un pequeño margen
-    margen_extension = int(ciclo_total_maximo * 0.1)  # 10% de margen adicional
-    datos_curva_filtrados = {dia: indices for dia, indices in datos_curva.items() 
-                           if dia <= ciclo_total_maximo_real}
-    datos_curva = datos_curva_filtrados
+    margen_extension = int(ciclo_total_promedio * 0.1)  # 10% de margen adicional
+    dias_permitidos = {dia: indices for dia, indices in datos_curva.items() 
+                     if dia <= ciclo_total_promedio + margen_extension}
+    datos_curva = dias_permitidos
     
     # Generar puntos para la curva filtrando valores atípicos por día
     puntos_curva = []
@@ -753,31 +686,34 @@ def curva_produccion(variedad_id):
     # Ordenar puntos por día para asegurar continuidad
     puntos_curva.sort(key=lambda x: x['dia'])
     
-
-    puntos_curva = [p for p in puntos_curva if p['dia'] <= ciclo_total_maximo + margen_extension]
+    # CAMBIO 4: Verificar si tenemos puntos cercanos al ciclo total
+    # Si no los hay, no añadir puntos sintéticos para evitar extender artificialmente la curva
+    
+    # CAMBIO 5: Realizar una última verificación para remover puntos más allá del ciclo total
+    puntos_curva = [p for p in puntos_curva if p['dia'] <= ciclo_total_promedio + margen_extension]
     
     # Generar el gráfico optimizado
     grafico_curva = None
     if puntos_curva:
         grafico_curva = generar_grafico_curva_mejorado(
-        puntos_curva,
-        variedad.variedad,
-        ciclo_vegetativo_promedio,
-        ciclo_total_maximo_real  # Usar el máximo real en lugar del promedio
-    )
+            puntos_curva,
+            variedad.variedad,
+            ciclo_vegetativo_promedio,
+            ciclo_total_promedio
+        )
     
     # Datos para mostrar en la plantilla
     datos_adicionales = {
-    'total_siembras': total_siembras,
-    'siembras_con_datos': siembras_con_datos,
-    'total_plantas': total_plantas,
-    'total_tallos': total_tallos,
-    'promedio_produccion': round((total_tallos / total_plantas * 100), 2) if total_plantas > 0 else 0,
-    'ciclo_vegetativo': ciclo_vegetativo_promedio,
-    'ciclo_productivo': max(0, ciclo_total_maximo - ciclo_vegetativo_promedio) if ciclo_total_maximo > 0 else 0,
-    'ciclo_total': ciclo_total_maximo,
-    'max_ciclo_historico': max(ciclos_totales) if ciclos_totales else ciclo_total_maximo
-}
+        'total_siembras': total_siembras,
+        'siembras_con_datos': siembras_con_datos,
+        'total_plantas': total_plantas,
+        'total_tallos': total_tallos,
+        'promedio_produccion': round((total_tallos / total_plantas * 100), 2) if total_plantas > 0 else 0,
+        'ciclo_vegetativo': ciclo_vegetativo_promedio,
+        'ciclo_productivo': ciclo_productivo_promedio,
+        'ciclo_total': ciclo_total_promedio,
+        'max_ciclo_historico': ciclo_total_maximo_real  # CAMBIO 6: Añadir para mostrar en la interfaz
+    }
     
     return render_template('reportes/curva_produccion.html',
                           title=f'Curva de Producción: {variedad.variedad}',
@@ -786,38 +722,7 @@ def curva_produccion(variedad_id):
                           grafico_curva=grafico_curva,
                           datos_adicionales=datos_adicionales)
 
-@reportes.route('/curva_produccion_interactiva/<int:variedad_id>')
-@login_required
-def curva_produccion_interactiva(variedad_id):
-    """
-    Versión interactiva de la curva de producción que usa la misma plantilla
-    que la versión estática pero es un punto de entrada separado para facilitar
-    la implementación futura de funcionalidades interactivas.
-    """
-    # Obtener la variedad solicitada
-    variedad = Variedad.query.get_or_404(variedad_id)
-    
-    # Para esta implementación inicial, usamos la misma plantilla que la versión estática
-    return render_template('reportes/curva_produccion.html',
-                          title=f'Curva de Producción: {variedad.variedad}',
-                          variedad=variedad,
-                          puntos_curva=[],  # Sin puntos para evitar errores
-                          grafico_curva=None,  # Sin gráfico para evitar errores  
-                          datos_adicionales={
-                              'total_siembras': 0,
-                              'siembras_con_datos': 0,
-                              'total_plantas': 0,
-                              'total_tallos': 0,
-                              'promedio_produccion': 0,
-                              'ciclo_vegetativo': 0,
-                              'ciclo_productivo': 0,
-                              'ciclo_total': 0,
-                              'max_ciclo_historico': 0
-                          })
-
-
-
-def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_maximo):
+def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo_promedio, ciclo_total_promedio):
     """
     Genera un gráfico optimizado para la curva de producción con límites ajustados al ciclo real.
     
@@ -825,7 +730,7 @@ def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo
         puntos_curva: Lista de puntos {dia, indice_promedio, ...}
         variedad_info: Nombre de la variedad para el título
         ciclo_vegetativo_promedio: Días promedio del ciclo vegetativo
-        ciclo_total_maximo: Días promedio del ciclo total
+        ciclo_total_promedio: Días promedio del ciclo total
         
     Returns:
         Imagen codificada en base64 del gráfico generado
@@ -850,7 +755,7 @@ def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo
         return grafico_base64
     
     # IMPORTANTE: Filtrar puntos más allá del ciclo total real (ESTRICTO)
-    puntos_filtrados = [p for p in puntos_curva if p['dia'] <= ciclo_total_maximo]
+    puntos_filtrados = [p for p in puntos_curva if p['dia'] <= ciclo_total_promedio]
     
     # Extraer datos para el gráfico
     dias = [p['dia'] for p in puntos_filtrados]
@@ -867,7 +772,7 @@ def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo
         try:
             # Crear una malla más densa para el suavizado que cubra exactamente 
             # desde 0 hasta el ciclo total real (no más allá)
-            dias_suavizados = np.linspace(0, ciclo_total_maximo, 100)
+            dias_suavizados = np.linspace(0, ciclo_total_promedio, 100)
             
             # Factor de suavizado adaptativo basado en el número de puntos
             # Menos puntos = menos suavizado para evitar overfitting
@@ -907,14 +812,14 @@ def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo
     
     # Eje X: mostrar EXACTAMENTE desde 0 hasta el ciclo total real SIN margen adicional
     # CAMBIO CLAVE: Limitar estrictamente el eje X al ciclo total promedio
-    plt.xlim(0, ciclo_total_maximo)
+    plt.xlim(0, ciclo_total_promedio)
     
     # Añadir líneas verticales para los ciclos
     plt.axvline(x=ciclo_vegetativo_promedio, color='g', linestyle='--', alpha=0.7,
                label=f'Fin ciclo vegetativo ({ciclo_vegetativo_promedio} días)')
     
-    plt.axvline(x=ciclo_total_maximo, color='r', linestyle='--', alpha=0.7,
-               label=f'Fin ciclo total ({ciclo_total_maximo} días)')
+    plt.axvline(x=ciclo_total_promedio, color='r', linestyle='--', alpha=0.7,
+               label=f'Fin ciclo total ({ciclo_total_promedio} días)')
     
     # Añadir anotaciones con los valores
     for p in puntos_filtrados:
@@ -940,59 +845,3 @@ def generar_grafico_curva_mejorado(puntos_curva, variedad_info, ciclo_vegetativo
     plt.close()
     
     return grafico_base64
-
-@reportes.route('/diagnostico_importacion')
-@login_required
-def diagnostico_importacion():
-    """
-    Proporciona diagnóstico de los datos importados y ayuda a identificar problemas.
-    """
-    # Estadísticas generales
-    stats = {
-        'total_siembras': Siembra.query.count(),
-        'total_cortes': Corte.query.count(),
-        'total_variedades': Variedad.query.count(),
-        'total_bloques': Bloque.query.count(),
-        'total_camas': Cama.query.count()
-    }
-    
-    # Verificar siembras sin cortes
-    siembras_sin_cortes = Siembra.query.outerjoin(Corte).group_by(Siembra.siembra_id).having(func.count(Corte.corte_id) == 0).count()
-    
-    # Verificar cortes con valores de índice extremos
-    cortes_indices_altos = db.session.query(Corte).join(Siembra).join(Area).join(Densidad).filter(
-        (Corte.cantidad_tallos / (Area.area * Densidad.valor)) > 1.5  # Índice superior al 150%
-    ).count()
-    
-    # Verificar variedades con siembras
-    variedades_con_siembras = db.session.query(Variedad).join(Siembra).group_by(Variedad.variedad_id).count()
-    
-    # Obtener curvas de producción disponibles
-    variedades_con_curvas = []
-    for variedad in Variedad.query.all():
-        # Verificar si la variedad tiene datos suficientes para una curva
-        siembras = Siembra.query.filter_by(variedad_id=variedad.variedad_id).all()
-        total_cortes = 0
-        for siembra in siembras:
-            total_cortes += len(siembra.cortes)
-        
-        if total_cortes > 0:
-            variedades_con_curvas.append({
-                'variedad_id': variedad.variedad_id,
-                'variedad': variedad.variedad,
-                'flor': variedad.flor_color.flor.flor if variedad.flor_color else "Desconocida",
-                'color': variedad.flor_color.color.color if variedad.flor_color else "Desconocido",
-                'siembras': len(siembras),
-                'cortes': total_cortes
-            })
-    
-    # Ordenar por número de cortes (más datos primero)
-    variedades_con_curvas.sort(key=lambda x: x['cortes'], reverse=True)
-    
-    return render_template('reportes/diagnostico_importacion.html',
-                          title='Diagnóstico de Importación',
-                          stats=stats,
-                          siembras_sin_cortes=siembras_sin_cortes,
-                          cortes_indices_altos=cortes_indices_altos,
-                          variedades_con_siembras=variedades_con_siembras,
-                          variedades_con_curvas=variedades_con_curvas)
