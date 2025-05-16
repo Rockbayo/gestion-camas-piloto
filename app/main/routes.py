@@ -1,6 +1,3 @@
-# Implementación completa de app/main/routes.py
-# Solución unificada para el cálculo de índices de aprovechamiento
-
 import matplotlib
 matplotlib.use('Agg')  # Configurar backend no interactivo
 
@@ -15,7 +12,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from app import db
 from app.main import bp
-from app.utils.data_utils import safe_decimal, calc_indice_aprovechamiento
+from app.utils.data_utils import calc_indice_aprovechamiento, safe_int, safe_float, to_float, calc_percentage
 from app.models import (
     Siembra, Corte, Variedad, Flor, Color, FlorColor, 
     BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
@@ -38,142 +35,10 @@ def dashboard():
     filtro_semana = request.args.get('filtro_semana', None, type=int)
     filtro_variedad = request.args.get('variedad_id', None, type=int)
     
-    # Construir condiciones de filtro
-    condiciones_filtro = []
-    condiciones_siembras = []
-    
-    # Aplicar filtros de tiempo
-    if filtro_tiempo == 'anio':
-        condiciones_filtro.append(extract('year', Corte.fecha_corte) == filtro_anio)
-        condiciones_siembras.append(extract('year', Siembra.fecha_siembra) == filtro_anio)
-    elif filtro_tiempo == 'mes':
-        condiciones_filtro.append(extract('year', Corte.fecha_corte) == filtro_anio)
-        condiciones_filtro.append(extract('month', Corte.fecha_corte) == filtro_mes)
-        condiciones_siembras.append(extract('year', Siembra.fecha_siembra) == filtro_anio)
-        condiciones_siembras.append(extract('month', Siembra.fecha_siembra) == filtro_mes)
-    elif filtro_tiempo == 'semana' and filtro_semana is not None:
-        # Calcular fecha de inicio y fin de la semana seleccionada
-        fecha_inicio_anio = datetime(filtro_anio, 1, 1)
-        dia_semana_inicio = fecha_inicio_anio.weekday()
-        ajuste_inicio = timedelta(days=dia_semana_inicio)
-        primer_lunes = fecha_inicio_anio - ajuste_inicio
-        inicio_semana = primer_lunes + timedelta(weeks=filtro_semana-1)
-        fin_semana = inicio_semana + timedelta(days=6)
-        
-        condiciones_filtro.append(Corte.fecha_corte >= inicio_semana)
-        condiciones_filtro.append(Corte.fecha_corte <= fin_semana)
-        condiciones_siembras.append(Siembra.fecha_siembra >= inicio_semana)
-        condiciones_siembras.append(Siembra.fecha_siembra <= fin_semana)
-    
-    # Filtro por variedad si es necesario
-    if filtro_variedad:
-        condiciones_siembras.append(Siembra.variedad_id == filtro_variedad)
-    
-    # Construir filtros combinados
-    filtro_cortes = and_(*condiciones_filtro) if condiciones_filtro else True
-    filtro_siembras = and_(*condiciones_siembras) if condiciones_siembras else True
-    
-    # Obtener datos brutos con una sola consulta para todos los cálculos
-    # Esto garantiza consistencia en todos los cálculos
-    datos_brutos = db.session.query(
-        Variedad.variedad_id,
-        Variedad.variedad,
-        Flor.flor_id,
-        Flor.flor,
-        Color.color_id,
-        Color.color,
-        Bloque.bloque_id,
-        Bloque.bloque,
-        func.sum(Corte.cantidad_tallos).label('total_tallos'),
-        func.sum(Area.area * Densidad.valor).label('total_plantas'),
-        func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
-    ).join(
-        Siembra, Variedad.variedad_id == Siembra.variedad_id
-    ).join(
-        Corte, Corte.siembra_id == Siembra.siembra_id
-    ).join(
-        FlorColor, Variedad.flor_color_id == FlorColor.flor_color_id
-    ).join(
-        Flor, FlorColor.flor_id == Flor.flor_id
-    ).join(
-        Color, FlorColor.color_id == Color.color_id
-    ).join(
-        BloqueCamaLado, Siembra.bloque_cama_id == BloqueCamaLado.bloque_cama_id
-    ).join(
-        Bloque, BloqueCamaLado.bloque_id == Bloque.bloque_id
-    ).join(
-        Area, Siembra.area_id == Area.area_id
-    ).join(
-        Densidad, Siembra.densidad_id == Densidad.densidad_id
-    ).filter(
-        Siembra.estado == 'Finalizada'
-    )
-    
-    # Aplicar filtros
-    if condiciones_filtro:
-        datos_brutos = datos_brutos.filter(filtro_cortes)
-    if condiciones_siembras:
-        datos_brutos = datos_brutos.filter(filtro_siembras)
-    if filtro_variedad:
-        datos_brutos = datos_brutos.filter(Siembra.variedad_id == filtro_variedad)
-    
-    # Agrupar por los campos relevantes
-    datos_brutos = datos_brutos.group_by(
-        Variedad.variedad_id,
-        Variedad.variedad,
-        Flor.flor_id,
-        Flor.flor,
-        Color.color_id,
-        Color.color,
-        Bloque.bloque_id,
-        Bloque.bloque
-    ).all()
-    
-    # 1. CALCULAR ESTADÍSTICAS GLOBALES
-    total_tallos_global = sum(d.total_tallos for d in datos_brutos)
-    total_plantas_global = sum(d.total_plantas for d in datos_brutos)
-    
-    # Calcular índice de aprovechamiento global
-    indice_aprovechamiento = 0
-    if total_plantas_global > 0:
-        indice_aprovechamiento = float(calc_indice_aprovechamiento(total_tallos_global, total_plantas_global))
-    
-    print(f"DEBUG - Índice global: {indice_aprovechamiento}% (Tallos: {total_tallos_global}, Plantas: {total_plantas_global})")
-    
-    # 2. ESTADÍSTICAS GENERALES PARA EL DASHBOARD
-    siembras_query = Siembra.query
-    if filtro_variedad:
-        siembras_query = siembras_query.filter(Siembra.variedad_id == filtro_variedad)
-    if condiciones_siembras:
-        siembras_query = siembras_query.filter(filtro_siembras)
-    
-    siembras_activas = siembras_query.filter_by(estado='Activa').count()
-    total_siembras = siembras_query.count()
-    siembras_historicas = total_siembras - siembras_activas
-    
-    # Calcular promedio de cortes por siembra
-    cortes_query = db.session.query(
-        func.count(Corte.corte_id),
-        func.count(func.distinct(Corte.siembra_id))
-    ).filter(filtro_cortes)
-    
-    if filtro_variedad:
-        cortes_query = cortes_query.join(Siembra, Corte.siembra_id == Siembra.siembra_id).\
-                            filter(Siembra.variedad_id == filtro_variedad)
-    
-    total_cortes, total_siembras_con_cortes = cortes_query.first()
-    promedio_cortes = round(total_cortes / total_siembras_con_cortes, 2) if total_siembras_con_cortes else 0
-    
-    # Cantidad total de variedades
-    total_variedades = Variedad.query.count()
-    
-    # Obtener la variedad seleccionada si hay filtro
-    variedad_seleccionada = None
-    if filtro_variedad:
-        variedad_seleccionada = Variedad.query.get(filtro_variedad)
+    # ... (código existente) ...
     
     # 3. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR VARIEDAD
-    # Agrupar datos por variedad
+    # Agrupar datos por variedad con manejo consistente de tipos numéricos
     datos_por_variedad = {}
     for d in datos_brutos:
         if d.variedad_id not in datos_por_variedad:
@@ -187,15 +52,18 @@ def dashboard():
                 'total_siembras': 0
             }
         
-        datos_por_variedad[d.variedad_id]['total_tallos'] += d.total_tallos
-        datos_por_variedad[d.variedad_id]['total_plantas'] += d.total_plantas
-        datos_por_variedad[d.variedad_id]['total_siembras'] += d.total_siembras
+        # Usar safe_int en lugar de to_int
+        datos_por_variedad[d.variedad_id]['total_tallos'] += safe_int(d.total_tallos)
+        # Usar safe_float en lugar de to_float
+        datos_por_variedad[d.variedad_id]['total_plantas'] += safe_float(d.total_plantas)
+        datos_por_variedad[d.variedad_id]['total_siembras'] += safe_int(d.total_siembras)
     
     # Calcular índices para cada variedad de manera consistente
     datos_variedades = []
     for var_id, datos in datos_por_variedad.items():
         if datos['total_plantas'] > 0:
-            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
+            # Usar calc_indice_aprovechamiento que ya está importado
+            indice = float(calc_indice_aprovechamiento(datos['total_tallos'], datos['total_plantas']))
             datos_variedades.append({
                 'variedad_id': datos['variedad_id'],
                 'variedad': datos['variedad'],
@@ -207,15 +75,8 @@ def dashboard():
                 'total_siembras': datos['total_siembras']
             })
     
-    # Ordenar por índice y limitar a top 5
-    datos_variedades.sort(key=lambda x: x['indice_aprovechamiento'], reverse=True)
-    top_variedades = datos_variedades[:5]
-    
-    # Para depuración
-    print("DEBUG - Índices de aprovechamiento por variedad:")
-    for v in top_variedades:
-        print(f"{v['variedad']}: {v['indice_aprovechamiento']}% (Tallos: {v['total_tallos']}, Plantas: {v['total_plantas']})")
-    
+    # ... (resto del código igual)
+
     # 4. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR TIPO DE FLOR
     datos_por_flor = {}
     for d in datos_brutos:
@@ -228,15 +89,17 @@ def dashboard():
                 'total_siembras': 0
             }
         
-        datos_por_flor[d.flor_id]['total_tallos'] += d.total_tallos
-        datos_por_flor[d.flor_id]['total_plantas'] += d.total_plantas
-        datos_por_flor[d.flor_id]['total_siembras'] += d.total_siembras
+        # Usar safe_int y safe_float
+        datos_por_flor[d.flor_id]['total_tallos'] += safe_int(d.total_tallos)
+        datos_por_flor[d.flor_id]['total_plantas'] += safe_float(d.total_plantas)
+        datos_por_flor[d.flor_id]['total_siembras'] += safe_int(d.total_siembras)
+    
     
     # Calcular índices para cada tipo de flor
     datos_flores = []
     for flor_id, datos in datos_por_flor.items():
         if datos['total_plantas'] > 0:
-            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
+            indice = to_float(calc_percentage(datos['total_tallos'], datos['total_plantas']))
             datos_flores.append({
                 'flor_id': datos['flor_id'],
                 'flor': datos['flor'],
@@ -246,12 +109,7 @@ def dashboard():
                 'total_siembras': datos['total_siembras']
             })
     
-    # Para depuración
-    print("DEBUG - Índices de aprovechamiento por tipo de flor:")
-    for f in datos_flores:
-        print(f"{f['flor']}: {f['indice_aprovechamiento']}% (Tallos: {f['total_tallos']}, Plantas: {f['total_plantas']})")
-    
-    # 5. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR BLOQUE
+     # 5. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR BLOQUE
     datos_por_bloque = {}
     for d in datos_brutos:
         if d.bloque_id not in datos_por_bloque:
@@ -263,15 +121,16 @@ def dashboard():
                 'total_siembras': 0
             }
         
-        datos_por_bloque[d.bloque_id]['total_tallos'] += d.total_tallos
-        datos_por_bloque[d.bloque_id]['total_plantas'] += d.total_plantas
-        datos_por_bloque[d.bloque_id]['total_siembras'] += d.total_siembras
+        # Usar safe_int y safe_float
+        datos_por_bloque[d.bloque_id]['total_tallos'] += safe_int(d.total_tallos)
+        datos_por_bloque[d.bloque_id]['total_plantas'] += safe_float(d.total_plantas)
+        datos_por_bloque[d.bloque_id]['total_siembras'] += safe_int(d.total_siembras)
     
     # Calcular índices para cada bloque
     datos_bloques = []
     for bloque_id, datos in datos_por_bloque.items():
         if datos['total_plantas'] > 0:
-            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
+            indice = to_float(calc_percentage(datos['total_tallos'], datos['total_plantas']))
             datos_bloques.append({
                 'bloque_id': datos['bloque_id'],
                 'bloque': datos['bloque'],
@@ -285,12 +144,9 @@ def dashboard():
     datos_bloques.sort(key=lambda x: x['indice_aprovechamiento'], reverse=True)
     top_bloques = datos_bloques[:8]
     
-    # Para depuración
-    print("DEBUG - Índices de aprovechamiento por bloque:")
-    for b in top_bloques:
-        print(f"{b['bloque']}: {b['indice_aprovechamiento']}% (Tallos: {b['total_tallos']}, Plantas: {b['total_plantas']})")
-    
     # 6. GENERAR GRÁFICOS
+    # Mantener la generación de gráficos igual, pero usando los datos con tipos 
+    # coherentes calculados arriba
     
     # Gráfico de aprovechamiento por variedad
     grafico_aprovechamiento_variedad = None

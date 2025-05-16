@@ -220,7 +220,7 @@ class Area(db.Model):
     __tablename__ = 'areas'
     area_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     siembra = db.Column(db.String(20), nullable=False, unique=True)
-    area = db.Column(db.Float, nullable=False)
+    area = db.Column(db.Numeric(10, 4), nullable=False)  # DECIMAL(10,4)
     
     def __repr__(self):
         return f'<Area {self.siembra}>'
@@ -230,7 +230,7 @@ class Densidad(db.Model):
     densidad_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     densidad = db.Column(db.String(20), nullable=False, unique=True)
     # Nuevo campo para el valor de plantas por metro cuadrado
-    valor = db.Column(db.Float, nullable=False, default=1.0)
+    valor = db.Column(db.Numeric(10, 4), nullable=False, default=1.0)  # DECIMAL(10,4)
     
     def __repr__(self):
         return f'<Densidad {self.densidad} ({self.valor} plantas/m²)>'
@@ -301,7 +301,7 @@ class Corte(db.Model):
     siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
     num_corte = db.Column(db.Integer, nullable=False)
     fecha_corte = db.Column(db.Date, nullable=False)
-    cantidad_tallos = db.Column(db.Integer, nullable=False)
+    cantidad_tallos = db.Column(db.Integer, nullable=False)  # INTEGER
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
     fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     

@@ -3,52 +3,32 @@
 Utilidades para manejo consistente de tipos de datos y cálculos numéricos
 """
 from decimal import Decimal, getcontext, ROUND_HALF_UP
+from app.utils.number_utils import to_decimal, to_int, to_float, calc_percentage
 import numpy as np
 
 # Configurar precisión para operaciones con Decimal
 getcontext().prec = 10  # 10 dígitos de precisión
 getcontext().rounding = ROUND_HALF_UP  # Redondeo estándar
 
-def safe_decimal(value, default=Decimal('0.0')):
-    """Convierte un valor a Decimal de manera segura"""
-    if value is None:
-        return default
-    try:
-        # Si es string, limpiarlo primero
-        if isinstance(value, str):
-            value = value.strip().replace(',', '.')
-        return Decimal(str(value))
-    except (ValueError, TypeError, ArithmeticError):
-        return default
+def safe_decimal(value, default=None):
+    """Alias de to_decimal para mantener compatibilidad"""
+    if default is None:
+        from decimal import Decimal
+        default = Decimal('0.0')
+    return to_decimal(value, default)
 
 def safe_int(value, default=0):
-    """Convierte un valor a entero de manera segura"""
-    if value is None:
-        return default
-    try:
-        # Para valores Decimal o float, redondear primero
-        if isinstance(value, Decimal) or isinstance(value, float):
-            return int(round(value))
-        return int(value)
-    except (ValueError, TypeError):
-        return default
+    """Alias de to_int para mantener compatibilidad"""
+    return to_int(value, default)
 
 def safe_float(value, default=0.0):
-    """Convierte un valor a float de manera segura"""
-    if value is None:
-        return default
-    try:
-        # Si es string, limpiarlo primero
-        if isinstance(value, str):
-            value = value.strip().replace(',', '.')
-        return float(value)
-    except (ValueError, TypeError):
-        return default
+    """Alias de to_float para mantener compatibilidad"""
+    return to_float(value, default)
 
 def calc_indice_aprovechamiento(tallos, plantas):
     """
     Calcula el índice de aprovechamiento (tallos/plantas en porcentaje)
-    con manejo de errores y tipos de datos.
+    usando las nuevas funciones de cálculo de porcentaje.
     
     Args:
         tallos: Cantidad de tallos cosechados
@@ -57,20 +37,12 @@ def calc_indice_aprovechamiento(tallos, plantas):
     Returns:
         Valor decimal del índice (porcentaje)
     """
-    tallos_dec = safe_decimal(tallos)
-    plantas_dec = safe_decimal(plantas)
-    
-    if plantas_dec <= Decimal('0'):
-        return Decimal('0')
-        
-    indice = (tallos_dec / plantas_dec) * Decimal('100')
-    # Redondear a 2 decimales
-    return indice.quantize(Decimal('0.01'))
+    return calc_percentage(tallos, plantas, precision=2)
 
 def calc_plantas_totales(area, densidad):
     """
-    Calcula total de plantas según área y densidad
-    con manejo consistente de tipos de datos.
+    Calcula total de plantas según área y densidad.
+    Delegando a la nueva implementación.
     
     Args:
         area: Área en metros cuadrados
@@ -79,12 +51,10 @@ def calc_plantas_totales(area, densidad):
     Returns:
         Cantidad de plantas (entero)
     """
-    area_dec = safe_decimal(area)
-    densidad_dec = safe_decimal(densidad)
-    
-    plantas = area_dec * densidad_dec
-    return safe_int(plantas)
+    from app.utils.number_utils import calc_plants_from_area_and_density
+    return calc_plants_from_area_and_density(area, densidad)
 
+# Mantener la función original sin cambios
 def filtrar_outliers_iqr(valores, factor=1.5):
     """
     Filtra valores atípicos usando el método del rango intercuartil (IQR)
