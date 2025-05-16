@@ -2,6 +2,8 @@
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from decimal import Decimal
+from app.utils.data_utils import safe_decimal, safe_int, safe_float, calc_indice_aprovechamiento, calc_plantas_totales
 from app import db, login_manager
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import text
@@ -335,7 +337,7 @@ def indice_sobre_total(self):
         # Obtener el total de plantas sembradas
         total_plantas = 0
         if self.siembra.area and self.siembra.densidad:
-            total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+            total_plantas = calc_plantas_totales(self.siembra.area.area, self.siembra.densidad.valor)
         
         # Calcular el índice (porcentaje)
         if total_plantas > 0:
@@ -353,7 +355,7 @@ def indice_acumulado(self):
         # Obtener el total de plantas sembradas
         total_plantas = 0
         if self.siembra.area and self.siembra.densidad:
-            total_plantas = int(self.siembra.area.area * self.siembra.densidad.valor)
+            total_plantas = calc_plantas_totales(self.siembra.area.area, self.siembra.densidad.valor)
         
         if total_plantas <= 0:
             return 0
@@ -407,7 +409,7 @@ def obtener_prediccion(self):
         
         for siembra in siembras_similares:
             # Calcular total de plantas
-            total_plantas = int(siembra.area.area * siembra.densidad.valor)
+            total_plantas = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
             
             # Obtener cortes en un rango de +/- 5 días
             cortes_similares = Corte.query.filter(
@@ -417,7 +419,7 @@ def obtener_prediccion(self):
             
             for corte in cortes_similares:
                 # Calcular índice
-                indice = (corte.cantidad_tallos / total_plantas) * 100
+                indice = float(calc_indice_aprovechamiento(corte.cantidad_tallos, total_plantas))
                 indices_similares.append(indice)
         
         if not indices_similares:

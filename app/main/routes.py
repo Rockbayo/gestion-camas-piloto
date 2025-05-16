@@ -13,9 +13,9 @@ from io import BytesIO
 import base64
 import numpy as np
 from datetime import datetime, timedelta
-from decimal import Decimal
 from app import db
 from app.main import bp
+from app.utils.data_utils import safe_decimal, calc_indice_aprovechamiento
 from app.models import (
     Siembra, Corte, Variedad, Flor, Color, FlorColor, 
     BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
@@ -136,7 +136,7 @@ def dashboard():
     # Calcular índice de aprovechamiento global
     indice_aprovechamiento = 0
     if total_plantas_global > 0:
-        indice_aprovechamiento = round((Decimal(total_tallos_global) / Decimal(total_plantas_global)) * Decimal('100'), 2)
+        indice_aprovechamiento = float(calc_indice_aprovechamiento(total_tallos_global, total_plantas_global))
     
     print(f"DEBUG - Índice global: {indice_aprovechamiento}% (Tallos: {total_tallos_global}, Plantas: {total_plantas_global})")
     
@@ -195,7 +195,7 @@ def dashboard():
     datos_variedades = []
     for var_id, datos in datos_por_variedad.items():
         if datos['total_plantas'] > 0:
-            indice = (Decimal(datos['total_tallos']) / Decimal(datos['total_plantas'])) * Decimal('100')
+            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
             datos_variedades.append({
                 'variedad_id': datos['variedad_id'],
                 'variedad': datos['variedad'],
@@ -236,7 +236,7 @@ def dashboard():
     datos_flores = []
     for flor_id, datos in datos_por_flor.items():
         if datos['total_plantas'] > 0:
-            indice = (Decimal(datos['total_tallos']) / Decimal(datos['total_plantas'])) * Decimal('100')
+            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
             datos_flores.append({
                 'flor_id': datos['flor_id'],
                 'flor': datos['flor'],
@@ -271,7 +271,7 @@ def dashboard():
     datos_bloques = []
     for bloque_id, datos in datos_por_bloque.items():
         if datos['total_plantas'] > 0:
-            indice = (Decimal(datos['total_tallos'])) / (Decimal(datos['total_plantas'])) * 100
+            indice = (datos['total_tallos'] / datos['total_plantas']) * 100
             datos_bloques.append({
                 'bloque_id': datos['bloque_id'],
                 'bloque': datos['bloque'],

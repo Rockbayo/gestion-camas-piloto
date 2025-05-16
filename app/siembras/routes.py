@@ -226,7 +226,7 @@ def editar(id):
             area = Area.query.get(siembra.area_id)
             densidad = Densidad.query.get(siembra.densidad_id)
             if area and densidad and densidad.valor > 0:
-                cantidad_plantas = int(area.area * densidad.valor)
+                cantidad_plantas = calc_plantas_totales(area.area, densidad.valor)
                 form.cantidad_plantas.data = cantidad_plantas
             else:
                 form.cantidad_plantas.data = 0

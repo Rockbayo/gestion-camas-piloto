@@ -1,6 +1,7 @@
 # Rutas para la gestión de cortes
 from flask import render_template, flash, redirect, url_for, request
 from flask_login import login_required, current_user
+from app.utils.data_utils import safe_decimal, safe_int, safe_float, calc_indice_aprovechamiento, calc_plantas_totales
 from app import db
 from app.cortes import bp
 from app.cortes.forms import CorteForm
@@ -42,7 +43,7 @@ def crear(id):
         
         total_plantas_sembradas = 0
         if siembra.area and siembra.densidad:
-            total_plantas_sembradas = int(siembra.area.area * siembra.densidad.valor)
+            total_plantas_sembradas = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
         
         tallos_disponibles = total_plantas_sembradas - total_tallos_actuales
         
@@ -135,7 +136,7 @@ def editar(id):
         
         total_plantas_sembradas = 0
         if siembra.area and siembra.densidad:
-            total_plantas_sembradas = int(siembra.area.area * siembra.densidad.valor)
+            total_plantas_sembradas = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
         
         tallos_disponibles = total_plantas_sembradas - total_tallos_otros_cortes
         

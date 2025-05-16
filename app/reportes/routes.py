@@ -647,7 +647,7 @@ def curva_produccion(variedad_id):
         # Calcular total de plantas para esta siembra
         plantas_siembra = 0
         if siembra.area and siembra.densidad:
-            plantas_siembra = int(siembra.area.area * siembra.densidad.valor)
+            plantas_siembra = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
             
         if plantas_siembra <= 0:
             continue  # No se puede calcular índices sin plantas
@@ -694,7 +694,7 @@ def curva_produccion(variedad_id):
         for corte in siembra.cortes:
             # Calcular días desde siembra y porcentaje de tallos
             dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
-            indice_porcentaje = (corte.cantidad_tallos / plantas_siembra) * 100
+            indice_porcentaje = float(calc_indice_aprovechamiento(corte.cantidad_tallos, plantas_siembra))
             total_tallos += corte.cantidad_tallos
             
             # Agrupar índices por día
@@ -1549,7 +1549,7 @@ def procesar_datos_curva(variedad_id, bloque_id=None, periodo_filtro='completo',
         # Calcular total de plantas para esta siembra
         plantas_siembra = 0
         if siembra.area and siembra.densidad:
-            plantas_siembra = int(siembra.area.area * siembra.densidad.valor)
+            plantas_siembra = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
             
         if plantas_siembra <= 0:
             continue  # No se puede calcular índices sin plantas
@@ -1592,7 +1592,7 @@ def procesar_datos_curva(variedad_id, bloque_id=None, periodo_filtro='completo',
         for corte in siembra.cortes:
             # Calcular días desde siembra y porcentaje de tallos
             dias_desde_siembra = (corte.fecha_corte - siembra.fecha_siembra).days
-            indice_porcentaje = (corte.cantidad_tallos / plantas_siembra) * 100
+            indice_porcentaje = float(calc_indice_aprovechamiento(corte.cantidad_tallos, plantas_siembra))
             total_tallos += corte.cantidad_tallos
             
             # Agrupar índices por día

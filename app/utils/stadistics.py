@@ -166,11 +166,11 @@ def agrupar_puntos_curva(cortes, siembras, dias_max=93):
         if not siembra.area or not siembra.densidad or not siembra.densidad.valor:
             continue
             
-        plantas_totales = siembra.area.area * siembra.densidad.valor
+        plantas_totales = calc_plantas_totales(siembra.area.area, siembra.densidad.valor)
         if plantas_totales <= 0:
             continue
             
-        indice = (corte.cantidad_tallos / plantas_totales) * 100
+        indice = float(calc_indice_aprovechamiento(corte.cantidad_tallos, plantas_totales))
         
         # Agrupar por día
         if dias_desde_siembra not in datos_por_dia:

@@ -9,6 +9,9 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 
+# Importar utilidades para manejo de datos
+from app.utils.data_utils import safe_decimal, safe_int, safe_float, calc_indice_aprovechamiento, calc_plantas_totales, filtrar_outliers_iqr
+
 # Inicialización de extensiones
 db = SQLAlchemy()
 migrate = Migrate()
