@@ -10,7 +10,7 @@ from app.models import (
     Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
     Densidad, Siembra, Corte, Area, Usuario
 )
-from app.utils.dataset_importer import DatasetImporter
+from app.utils.optimizado import DatasetImporter
 import os
 import pandas as pd
 import uuid
@@ -461,7 +461,7 @@ def importar_historico():
             
             try:
                 # Importar datos históricos usando la utilidad
-                from app.utils.importar_historico import importar_historico
+                from app.utils.optimizado import importar_historico
                 importar_historico(temp_path)
                 
                 flash('Datos históricos importados correctamente', 'success')

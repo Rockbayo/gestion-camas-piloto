@@ -60,7 +60,7 @@ def register_cli_commands(app):
     def importar_historico_cmd():
         """Importa datos históricos desde un archivo Excel."""
         import os
-        from app.utils.importar_historico import importar_historico
+        from app.utils.optimizado import importar_historico
         
         archivo = input("Ruta del archivo Excel: ")
         if not os.path.exists(archivo):
@@ -101,7 +101,7 @@ def create_app(config_class=Config):
     app.register_blueprint(reportes_bp)
     
     # Añadir filtros personalizados para fechas
-    from app.utils.date_filter import add_date_filter
+    from app.utils.optimizado import add_date_filter
     add_date_filter(app)
     
     # Manejar errores
