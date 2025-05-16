@@ -1,4 +1,5 @@
-# app/main/routes.py (versión mejorada)
+# Implementación completa de app/main/routes.py
+# Solución unificada para el cálculo de índices de aprovechamiento
 
 import matplotlib
 matplotlib.use('Agg')  # Configurar backend no interactivo
@@ -12,6 +13,7 @@ from io import BytesIO
 import base64
 import numpy as np
 from datetime import datetime, timedelta
+from decimal import Decimal
 from app import db
 from app.main import bp
 from app.models import (
@@ -19,102 +21,28 @@ from app.models import (
     BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
 )
 
-def calcular_indice_aprovechamiento(query_base, filtros=None, filtro_variedad=None, solo_finalizadas=True):
-    """
-    Función central para calcular el índice de aprovechamiento de forma consistente.
-    
-    Args:
-        query_base: Query base de SQLAlchemy para filtrar cortes
-        filtros: Condiciones de filtro adicionales para siembras
-        filtro_variedad: ID de la variedad si se está filtrando por variedad
-        solo_finalizadas: Si es True, solo considera siembras finalizadas
-        
-    Returns:
-        tuple: (indice_aprovechamiento, total_tallos, total_plantas, mensaje_debug)
-    """
-    # Construir consulta base de siembras
-    siembras_query = Siembra.query
-    
-    # Aplicar filtros
-    if filtros:
-        siembras_query = siembras_query.filter(filtros)
-    
-    # Filtrar por variedad si es necesario
-    if filtro_variedad:
-        siembras_query = siembras_query.filter(Siembra.variedad_id == filtro_variedad)
-    
-    # Filtrar por estado si se requiere
-    if solo_finalizadas:
-        siembras_query = siembras_query.filter(Siembra.estado == 'Finalizada')
-    
-    # Obtener lista de IDs de siembras que cumplen con los criterios
-    siembras_ids = [s.siembra_id for s in siembras_query.all()]
-    
-    if not siembras_ids:
-        return 0, 0, 0, "No hay siembras que cumplan con los criterios"
-    
-    # Calcular total de tallos cortados
-    total_tallos_query = db.session.query(
-        func.sum(Corte.cantidad_tallos)
-    ).join(
-        Siembra, Corte.siembra_id == Siembra.siembra_id
-    ).filter(
-        Siembra.siembra_id.in_(siembras_ids)
-    )
-    
-    # Aplicar filtros adicionales a los cortes si es necesario
-    if query_base:
-        total_tallos_query = total_tallos_query.filter(query_base)
-    
-    total_tallos_cortados = total_tallos_query.scalar() or 0
-    
-    # Calcular total de plantas sembradas
-    total_plantas_query = db.session.query(
-        func.sum(Area.area * Densidad.valor)
-    ).select_from(Siembra)\
-    .join(Area, Siembra.area_id == Area.area_id)\
-    .join(Densidad, Siembra.densidad_id == Densidad.densidad_id)\
-    .filter(
-        Siembra.siembra_id.in_(siembras_ids)
-    )
-    
-    total_plantas_sembradas = total_plantas_query.scalar() or 0
-    
-    # Convertir a float y calcular el índice
-    total_tallos_float = float(total_tallos_cortados) if total_tallos_cortados else 0
-    total_plantas_float = float(total_plantas_sembradas) if total_plantas_sembradas else 0
-    
-    # Calcular el índice
-    indice_aprovechamiento = 0
-    if total_plantas_float > 0:
-        indice_aprovechamiento = (total_tallos_float / total_plantas_float) * 100
-        indice_aprovechamiento = round(indice_aprovechamiento, 2)
-    
-    mensaje_debug = f"Tallos: {total_tallos_float}, Plantas: {total_plantas_float}, Índice: {indice_aprovechamiento}%"
-    return indice_aprovechamiento, total_tallos_float, total_plantas_float, mensaje_debug
-
 @bp.route('/')
 @login_required
 def index():
+    """Vista principal del sistema."""
     return render_template('index.html', title='Inicio')
-
-# Código actualizado para app/main/routes.py con filtro por variedad añadido
 
 @bp.route('/dashboard')
 @login_required
 def dashboard():
+    """Dashboard con estadísticas y visualizaciones."""
     # Obtener parámetros de filtro
     filtro_tiempo = request.args.get('filtro_tiempo', 'todo')
     filtro_anio = request.args.get('filtro_anio', datetime.now().year, type=int)
     filtro_mes = request.args.get('filtro_mes', datetime.now().month, type=int)
     filtro_semana = request.args.get('filtro_semana', None, type=int)
-    filtro_variedad = request.args.get('variedad_id', None, type=int)  # Nuevo filtro por variedad
+    filtro_variedad = request.args.get('variedad_id', None, type=int)
     
-    # Construir las condiciones de filtro
+    # Construir condiciones de filtro
     condiciones_filtro = []
-    condiciones_siembras = []  # Para filtros específicos sobre siembras
+    condiciones_siembras = []
     
-    # Aplicar filtros de tiempo a las consultas
+    # Aplicar filtros de tiempo
     if filtro_tiempo == 'anio':
         condiciones_filtro.append(extract('year', Corte.fecha_corte) == filtro_anio)
         condiciones_siembras.append(extract('year', Siembra.fecha_siembra) == filtro_anio)
@@ -137,150 +65,27 @@ def dashboard():
         condiciones_siembras.append(Siembra.fecha_siembra >= inicio_semana)
         condiciones_siembras.append(Siembra.fecha_siembra <= fin_semana)
     
-    # Filtro por variedad
+    # Filtro por variedad si es necesario
     if filtro_variedad:
         condiciones_siembras.append(Siembra.variedad_id == filtro_variedad)
     
     # Construir filtros combinados
-    filtro_cortes = and_(*condiciones_cortes) if condiciones_cortes else True
+    filtro_cortes = and_(*condiciones_filtro) if condiciones_filtro else True
     filtro_siembras = and_(*condiciones_siembras) if condiciones_siembras else True
-
-    # Usar la función centralizada para calcular el índice de aprovechamiento
-    indice_aprovechamiento, total_tallos, total_plantas, debug_msg = calcular_indice_aprovechamiento(
-        filtro_cortes, 
-        filtro_siembras, 
-        filtro_variedad, 
-        solo_finalizadas=True
-    )
-
-    print(f"DEBUG - Cálculo de índice global: {debug_msg}")
     
-    # Obtener estadísticas para el dashboard
-    # Para el filtro de variedad, ajustamos las consultas de siembras
-    if filtro_variedad:
-        siembras_query = Siembra.query.filter(Siembra.variedad_id == filtro_variedad)
-    else:
-        siembras_query = Siembra.query
-    
-    # Aplicar los filtros temporales a siembras si hay alguno
-    if condiciones_siembras:
-        siembras_query = siembras_query.filter(filtro_siembras)
-    
-    siembras_activas = siembras_query.filter_by(estado='Activa').count()
-    total_siembras = siembras_query.count()
-    siembras_historicas = total_siembras - siembras_activas
-    
-    # Calcular promedio de cortes por siembra (en lugar de total de cortes)
-    # Modificar para incluir el filtro de variedad si está presente
-    cortes_query = db.session.query(
-        func.count(Corte.corte_id),
-        func.count(func.distinct(Corte.siembra_id))
-    ).filter(filtro_cortes)
-    
-    if filtro_variedad:
-        cortes_query = cortes_query.join(Siembra, Corte.siembra_id == Siembra.siembra_id)\
-                                  .filter(Siembra.variedad_id == filtro_variedad)
-    
-    total_cortes, total_siembras_con_cortes = cortes_query.first()
-    
-    promedio_cortes = round(total_cortes / total_siembras_con_cortes, 2) if total_siembras_con_cortes else 0
-    
-    # Índice de aprovechamiento global
-    # Primero, obtener solo las siembras finalizadas para un cálculo más preciso
-    siembras_finalizadas = siembras_query.filter_by(estado='Finalizada')
-    
-    # Luego, calculamos el total de tallos cortados para estas siembras
-    total_tallos_query = db.session.query(
-        func.sum(Corte.cantidad_tallos)
-    ).join(
-        Siembra, Corte.siembra_id == Siembra.siembra_id
-    ).filter(
-        Siembra.siembra_id.in_([s.siembra_id for s in siembras_finalizadas])
-    )
-    
-    if filtro_cortes is not True:
-        total_tallos_query = total_tallos_query.filter(filtro_cortes)
-    
-    total_tallos_cortados = total_tallos_query.scalar() or 0
-    
-    # Y calculamos el total de plantas sembradas para las mismas siembras
-    query_plantas_sembradas = db.session.query(
-        func.sum(Area.area * Densidad.valor)
-    ).select_from(Siembra)\
-    .join(Area, Siembra.area_id == Area.area_id)\
-    .join(Densidad, Siembra.densidad_id == Densidad.densidad_id)\
-    .filter(
-        Siembra.siembra_id.in_([s.siembra_id for s in siembras_finalizadas])
-    )
-    
-    total_plantas_sembradas = query_plantas_sembradas.scalar() or 0
-    
-    # Convertir a float para evitar problemas de tipos
-    total_tallos_float = float(total_tallos_cortados) if total_tallos_cortados else 0
-    total_plantas_float = float(total_plantas_sembradas) if total_plantas_sembradas else 0
-    
-    # Calcular el índice - asegurando que sea el porcentaje correcto
-    indice_aprovechamiento = 0
-    if total_plantas_float > 0:
-        indice_aprovechamiento = (total_tallos_float / total_plantas_float) * 100
-        # Redondear a 2 decimales
-        indice_aprovechamiento = round(indice_aprovechamiento, 2)
-    
-    # Para visualizar datos de depuración en el log
-    print(f"DEBUG - Filtro variedad: {filtro_variedad}")
-    print(f"DEBUG - Total tallos: {total_tallos_float}")
-    print(f"DEBUG - Total plantas: {total_plantas_float}")
-    print(f"DEBUG - Índice calculado: {indice_aprovechamiento}%")
-    
-    # Cantidad total de variedades
-    total_variedades = Variedad.query.count()
-    
-    # Obtener la variedad seleccionada si hay filtro
-    variedad_seleccionada = None
-    if filtro_variedad:
-        variedad_seleccionada = Variedad.query.get(filtro_variedad)
-    
-    # Agrupar todas las estadísticas
-    stats = {
-        'siembras_activas': siembras_activas,
-        'total_siembras': total_siembras,
-        'siembras_historicas': siembras_historicas,
-        'promedio_cortes': promedio_cortes,
-        'indice_aprovechamiento': indice_aprovechamiento,
-        'total_variedades': total_variedades,
-        'filtro_tiempo': filtro_tiempo,
-        'filtro_anio': filtro_anio,
-        'filtro_mes': filtro_mes,
-        'filtro_semana': filtro_semana,
-        'filtro_variedad': filtro_variedad,
-        'variedad_seleccionada': variedad_seleccionada
-    }
-    
-    # Últimos cortes (combinando nuevos e históricos)
-    # Aplicar filtro de variedad si existe
-    ultimos_cortes_query = Corte.query.order_by(Corte.fecha_corte.desc())
-    if filtro_variedad:
-        ultimos_cortes_query = ultimos_cortes_query.join(Siembra).filter(Siembra.variedad_id == filtro_variedad)
-    ultimos_cortes = ultimos_cortes_query.limit(5).all()
-    
-    # Últimas siembras (combinando nuevas e históricas)
-    # Aplicar filtro de variedad si existe
-    ultimas_siembras_query = Siembra.query.order_by(Siembra.fecha_siembra.desc())
-    if filtro_variedad:
-        ultimas_siembras_query = ultimas_siembras_query.filter(Siembra.variedad_id == filtro_variedad)
-    ultimas_siembras = ultimas_siembras_query.limit(5).all()
-    
-    # GRÁFICO: Top 5 variedades por ÍNDICE de aprovechamiento
-    # Si hay filtro de variedad, solo se mostrará esa variedad
-    top_variedades_query = db.session.query(
+    # Obtener datos brutos con una sola consulta para todos los cálculos
+    # Esto garantiza consistencia en todos los cálculos
+    datos_brutos = db.session.query(
         Variedad.variedad_id,
         Variedad.variedad,
+        Flor.flor_id,
         Flor.flor,
+        Color.color_id,
         Color.color,
-        (func.sum(Corte.cantidad_tallos) * 100.0 / 
-         func.sum(Area.area * Densidad.valor)).label('indice_aprovechamiento'),
-        func.sum(Corte.cantidad_tallos).label('total_tallos_cortados'),
-        func.sum(Area.area * Densidad.valor).label('total_plantas_sembradas'),
+        Bloque.bloque_id,
+        Bloque.bloque,
+        func.sum(Corte.cantidad_tallos).label('total_tallos'),
+        func.sum(Area.area * Densidad.valor).label('total_plantas'),
         func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
     ).join(
         Siembra, Variedad.variedad_id == Siembra.variedad_id
@@ -293,53 +98,211 @@ def dashboard():
     ).join(
         Color, FlorColor.color_id == Color.color_id
     ).join(
+        BloqueCamaLado, Siembra.bloque_cama_id == BloqueCamaLado.bloque_cama_id
+    ).join(
+        Bloque, BloqueCamaLado.bloque_id == Bloque.bloque_id
+    ).join(
         Area, Siembra.area_id == Area.area_id
     ).join(
         Densidad, Siembra.densidad_id == Densidad.densidad_id
     ).filter(
-        # Importante: Solo considerar siembras finalizadas para calcular aprovechamiento real
-        Siembra.estado == 'Finalizada',
-        # Aplicar filtros temporales como antes
-        filtro_cortes
+        Siembra.estado == 'Finalizada'
     )
     
-    # Si hay filtro de variedad, aplicarlo
+    # Aplicar filtros
+    if condiciones_filtro:
+        datos_brutos = datos_brutos.filter(filtro_cortes)
+    if condiciones_siembras:
+        datos_brutos = datos_brutos.filter(filtro_siembras)
     if filtro_variedad:
-        top_variedades_query = top_variedades_query.filter(Variedad.variedad_id == filtro_variedad)
+        datos_brutos = datos_brutos.filter(Siembra.variedad_id == filtro_variedad)
     
-    top_variedades_query = top_variedades_query.group_by(
+    # Agrupar por los campos relevantes
+    datos_brutos = datos_brutos.group_by(
         Variedad.variedad_id,
         Variedad.variedad,
+        Flor.flor_id,
         Flor.flor,
-        Color.color
-    ).having(
-        func.sum(Area.area * Densidad.valor) > 0,
-        # Agregar un filtro de datos mínimos para evitar valores atípicos
-        func.count(func.distinct(Siembra.siembra_id)) >= 2  # Al menos 2 siembras para estadísticas confiables
-    ).order_by(
-        desc('indice_aprovechamiento')
-    ).limit(5).all()
+        Color.color_id,
+        Color.color,
+        Bloque.bloque_id,
+        Bloque.bloque
+    ).all()
     
+    # 1. CALCULAR ESTADÍSTICAS GLOBALES
+    total_tallos_global = sum(d.total_tallos for d in datos_brutos)
+    total_plantas_global = sum(d.total_plantas for d in datos_brutos)
+    
+    # Calcular índice de aprovechamiento global
+    indice_aprovechamiento = 0
+    if total_plantas_global > 0:
+        indice_aprovechamiento = round((Decimal(total_tallos_global) / Decimal(total_plantas_global)) * Decimal('100'), 2)
+    
+    print(f"DEBUG - Índice global: {indice_aprovechamiento}% (Tallos: {total_tallos_global}, Plantas: {total_plantas_global})")
+    
+    # 2. ESTADÍSTICAS GENERALES PARA EL DASHBOARD
+    siembras_query = Siembra.query
+    if filtro_variedad:
+        siembras_query = siembras_query.filter(Siembra.variedad_id == filtro_variedad)
+    if condiciones_siembras:
+        siembras_query = siembras_query.filter(filtro_siembras)
+    
+    siembras_activas = siembras_query.filter_by(estado='Activa').count()
+    total_siembras = siembras_query.count()
+    siembras_historicas = total_siembras - siembras_activas
+    
+    # Calcular promedio de cortes por siembra
+    cortes_query = db.session.query(
+        func.count(Corte.corte_id),
+        func.count(func.distinct(Corte.siembra_id))
+    ).filter(filtro_cortes)
+    
+    if filtro_variedad:
+        cortes_query = cortes_query.join(Siembra, Corte.siembra_id == Siembra.siembra_id).\
+                            filter(Siembra.variedad_id == filtro_variedad)
+    
+    total_cortes, total_siembras_con_cortes = cortes_query.first()
+    promedio_cortes = round(total_cortes / total_siembras_con_cortes, 2) if total_siembras_con_cortes else 0
+    
+    # Cantidad total de variedades
+    total_variedades = Variedad.query.count()
+    
+    # Obtener la variedad seleccionada si hay filtro
+    variedad_seleccionada = None
+    if filtro_variedad:
+        variedad_seleccionada = Variedad.query.get(filtro_variedad)
+    
+    # 3. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR VARIEDAD
+    # Agrupar datos por variedad
+    datos_por_variedad = {}
+    for d in datos_brutos:
+        if d.variedad_id not in datos_por_variedad:
+            datos_por_variedad[d.variedad_id] = {
+                'variedad_id': d.variedad_id,
+                'variedad': d.variedad,
+                'flor': d.flor,
+                'color': d.color,
+                'total_tallos': 0,
+                'total_plantas': 0,
+                'total_siembras': 0
+            }
+        
+        datos_por_variedad[d.variedad_id]['total_tallos'] += d.total_tallos
+        datos_por_variedad[d.variedad_id]['total_plantas'] += d.total_plantas
+        datos_por_variedad[d.variedad_id]['total_siembras'] += d.total_siembras
+    
+    # Calcular índices para cada variedad de manera consistente
+    datos_variedades = []
+    for var_id, datos in datos_por_variedad.items():
+        if datos['total_plantas'] > 0:
+            indice = (Decimal(datos['total_tallos']) / Decimal(datos['total_plantas'])) * Decimal('100')
+            datos_variedades.append({
+                'variedad_id': datos['variedad_id'],
+                'variedad': datos['variedad'],
+                'flor': datos['flor'],
+                'color': datos['color'],
+                'indice_aprovechamiento': round(indice, 2),
+                'total_tallos': datos['total_tallos'],
+                'total_plantas': datos['total_plantas'],
+                'total_siembras': datos['total_siembras']
+            })
+    
+    # Ordenar por índice y limitar a top 5
+    datos_variedades.sort(key=lambda x: x['indice_aprovechamiento'], reverse=True)
+    top_variedades = datos_variedades[:5]
+    
+    # Para depuración
+    print("DEBUG - Índices de aprovechamiento por variedad:")
+    for v in top_variedades:
+        print(f"{v['variedad']}: {v['indice_aprovechamiento']}% (Tallos: {v['total_tallos']}, Plantas: {v['total_plantas']})")
+    
+    # 4. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR TIPO DE FLOR
+    datos_por_flor = {}
+    for d in datos_brutos:
+        if d.flor_id not in datos_por_flor:
+            datos_por_flor[d.flor_id] = {
+                'flor_id': d.flor_id,
+                'flor': d.flor,
+                'total_tallos': 0,
+                'total_plantas': 0,
+                'total_siembras': 0
+            }
+        
+        datos_por_flor[d.flor_id]['total_tallos'] += d.total_tallos
+        datos_por_flor[d.flor_id]['total_plantas'] += d.total_plantas
+        datos_por_flor[d.flor_id]['total_siembras'] += d.total_siembras
+    
+    # Calcular índices para cada tipo de flor
+    datos_flores = []
+    for flor_id, datos in datos_por_flor.items():
+        if datos['total_plantas'] > 0:
+            indice = (Decimal(datos['total_tallos']) / Decimal(datos['total_plantas'])) * Decimal('100')
+            datos_flores.append({
+                'flor_id': datos['flor_id'],
+                'flor': datos['flor'],
+                'indice_aprovechamiento': round(indice, 2),
+                'total_tallos': datos['total_tallos'],
+                'total_plantas': datos['total_plantas'],
+                'total_siembras': datos['total_siembras']
+            })
+    
+    # Para depuración
+    print("DEBUG - Índices de aprovechamiento por tipo de flor:")
+    for f in datos_flores:
+        print(f"{f['flor']}: {f['indice_aprovechamiento']}% (Tallos: {f['total_tallos']}, Plantas: {f['total_plantas']})")
+    
+    # 5. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR BLOQUE
+    datos_por_bloque = {}
+    for d in datos_brutos:
+        if d.bloque_id not in datos_por_bloque:
+            datos_por_bloque[d.bloque_id] = {
+                'bloque_id': d.bloque_id,
+                'bloque': d.bloque,
+                'total_tallos': 0,
+                'total_plantas': 0,
+                'total_siembras': 0
+            }
+        
+        datos_por_bloque[d.bloque_id]['total_tallos'] += d.total_tallos
+        datos_por_bloque[d.bloque_id]['total_plantas'] += d.total_plantas
+        datos_por_bloque[d.bloque_id]['total_siembras'] += d.total_siembras
+    
+    # Calcular índices para cada bloque
+    datos_bloques = []
+    for bloque_id, datos in datos_por_bloque.items():
+        if datos['total_plantas'] > 0:
+            indice = (Decimal(datos['total_tallos'])) / (Decimal(datos['total_plantas'])) * 100
+            datos_bloques.append({
+                'bloque_id': datos['bloque_id'],
+                'bloque': datos['bloque'],
+                'indice_aprovechamiento': round(indice, 2),
+                'total_tallos': datos['total_tallos'],
+                'total_plantas': datos['total_plantas'],
+                'total_siembras': datos['total_siembras']
+            })
+    
+    # Ordenar por índice y limitar a top 8
+    datos_bloques.sort(key=lambda x: x['indice_aprovechamiento'], reverse=True)
+    top_bloques = datos_bloques[:8]
+    
+    # Para depuración
+    print("DEBUG - Índices de aprovechamiento por bloque:")
+    for b in top_bloques:
+        print(f"{b['bloque']}: {b['indice_aprovechamiento']}% (Tallos: {b['total_tallos']}, Plantas: {b['total_plantas']})")
+    
+    # 6. GENERAR GRÁFICOS
+    
+    # Gráfico de aprovechamiento por variedad
     grafico_aprovechamiento_variedad = None
-    if top_variedades_query:
-        # Crear gráfico con matplotlib - MODIFICADO para escalar correctamente los valores
+    if top_variedades:
         plt.figure(figsize=(10, 6))
-        
-        # Extraer datos para el gráfico
-        variedades = [r.variedad for r in top_variedades_query]
-        indices = [float(r.indice_aprovechamiento) if r.indice_aprovechamiento is not None else 0.0 for r in top_variedades_query]
-        indices = [round(indice, 2) for indice in indices]  # Redondear a 2 decimales
-        
-        # DEBUG: Imprimir valores para verificación
-        print("DEBUG - Índices de aprovechamiento por variedad:")
-        for v, i in zip(variedades, indices):
-            print(f"{v}: {i}%")
+        variedades = [v['variedad'] for v in top_variedades]
+        indices = [v['indice_aprovechamiento'] for v in top_variedades]
         
         # Crear barras con colores gradientes según el aprovechamiento
-        # Usar un rango de colores adecuado para valores que pueden llegar a 100%
         bars = plt.bar(variedades, indices, color=plt.cm.YlGn(np.array(indices)/100))
         
-        # Añadir etiquetas en las barras
+        # Añadir etiquetas
         for bar, indice in zip(bars, indices):
             height = bar.get_height()
             plt.text(bar.get_x() + bar.get_width()/2., height,
@@ -357,7 +320,7 @@ def dashboard():
             
         plt.xticks(rotation=45, ha='right')
         
-        # Ajustar escala Y para acomodar valores mayores (hasta 100%)
+        # Ajustar escala Y
         y_max = max(100, max(indices) * 1.1) if indices else 100
         plt.ylim(0, min(y_max, 100))  # Limitar a un máximo de 100%
         
@@ -370,66 +333,17 @@ def dashboard():
         grafico_aprovechamiento_variedad = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
     
-    # NUEVO GRÁFICO: Aprovechamiento por bloque
-    aprovechamiento_bloque_query = db.session.query(
-        Bloque.bloque_id,
-        Bloque.bloque,
-        (func.sum(Corte.cantidad_tallos) * 100.0 / 
-         func.sum(Area.area * Densidad.valor)).label('indice_aprovechamiento'),
-        func.sum(Corte.cantidad_tallos).label('total_tallos_cortados'),
-        func.sum(Area.area * Densidad.valor).label('total_plantas_sembradas'),
-        func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
-    ).join(
-        BloqueCamaLado, Bloque.bloque_id == BloqueCamaLado.bloque_id
-    ).join(
-        Siembra, BloqueCamaLado.bloque_cama_id == Siembra.bloque_cama_id
-    ).join(
-        Corte, Corte.siembra_id == Siembra.siembra_id
-    ).join(
-        Area, Siembra.area_id == Area.area_id
-    ).join(
-        Densidad, Siembra.densidad_id == Densidad.densidad_id
-    ).filter(
-        # Solo siembras finalizadas
-        Siembra.estado == 'Finalizada',
-        # Filtros temporales
-        filtro_cortes
-    )
-    
-    # Si hay filtro de variedad, aplicarlo
-    if filtro_variedad:
-        aprovechamiento_bloque_query = aprovechamiento_bloque_query.filter(Siembra.variedad_id == filtro_variedad)
-    
-    aprovechamiento_bloque_query = aprovechamiento_bloque_query.group_by(
-        Bloque.bloque_id,
-        Bloque.bloque
-    ).having(
-        func.sum(Area.area * Densidad.valor) > 0,
-        # Asegurar datos mínimos
-        func.count(func.distinct(Siembra.siembra_id)) >= 2
-    ).order_by(
-        desc('indice_aprovechamiento')
-    ).limit(8).all()  # Limitamos a 8 bloques para visualización
-    
+    # Gráfico de aprovechamiento por bloque
     grafico_aprovechamiento_bloque = None
-    if aprovechamiento_bloque_query:
-        # Crear gráfico con matplotlib
+    if top_bloques:
         plt.figure(figsize=(10, 6))
+        bloques = [b['bloque'] for b in top_bloques]
+        indices = [b['indice_aprovechamiento'] for b in top_bloques]
         
-        # Extraer datos para el gráfico
-        bloques = [r.bloque for r in aprovechamiento_bloque_query]
-        indices = [float(r.indice_aprovechamiento) if r.indice_aprovechamiento is not None else 0.0 for r in aprovechamiento_bloque_query]
-        indices = [round(indice, 2) for indice in indices]  # Redondear a 2 decimales
-        
-        # DEBUG: Imprimir valores para verificación
-        print("DEBUG - Índices de aprovechamiento por bloque:")
-        for b, i in zip(bloques, indices):
-            print(f"{b}: {i}%")
-        
-        # Crear barras horizontales para mejor visualización de múltiples bloques
+        # Crear barras horizontales
         bars = plt.barh(bloques, indices, color=plt.cm.Blues(np.array(indices)/100))
         
-        # Añadir etiquetas en las barras
+        # Añadir etiquetas
         for bar, indice in zip(bars, indices):
             width = bar.get_width()
             plt.text(width + 2, bar.get_y() + bar.get_height()/2.,
@@ -439,15 +353,15 @@ def dashboard():
         plt.xlabel('Índice de Aprovechamiento (%)')
         plt.ylabel('Bloque')
         
-        # Ajustar título si hay filtro de variedad
+        # Ajustar título con variedad si está filtrado
         if filtro_variedad and variedad_seleccionada:
             plt.title(f'Aprovechamiento por Bloque: {variedad_seleccionada.variedad}')
         else:
             plt.title('Aprovechamiento por Bloque')
         
-        # Ajustar escala X para acomodar valores mayores (hasta 100%)
+        # Ajustar escala X
         x_max = max(100, max(indices) * 1.1) if indices else 100
-        plt.xlim(0, min(x_max, 100))  # Limitar a un máximo de 100%
+        plt.xlim(0, min(x_max, 100))
         
         plt.tight_layout()
         
@@ -458,72 +372,22 @@ def dashboard():
         grafico_aprovechamiento_bloque = base64.b64encode(buffer.getvalue()).decode('utf-8')
         plt.close()
     
-    # NUEVO GRÁFICO: Aprovechamiento por tipo de flor
-    aprovechamiento_flor_query = db.session.query(
-        Flor.flor_id,
-        Flor.flor,
-        (func.sum(Corte.cantidad_tallos) * 100.0 / 
-         func.sum(Area.area * Densidad.valor)).label('indice_aprovechamiento'),
-        func.sum(Corte.cantidad_tallos).label('total_tallos_cortados'),
-        func.sum(Area.area * Densidad.valor).label('total_plantas_sembradas'),
-        func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
-    ).join(
-        FlorColor, Flor.flor_id == FlorColor.flor_id
-    ).join(
-        Variedad, FlorColor.flor_color_id == Variedad.flor_color_id
-    ).join(
-        Siembra, Variedad.variedad_id == Siembra.variedad_id
-    ).join(
-        Corte, Corte.siembra_id == Siembra.siembra_id
-    ).join(
-        Area, Siembra.area_id == Area.area_id
-    ).join(
-        Densidad, Siembra.densidad_id == Densidad.densidad_id
-    ).filter(
-        # Solo siembras finalizadas para cálculos reales
-        Siembra.estado == 'Finalizada',
-        # Aplicar filtros temporales como antes
-        filtro_cortes
-    )
-    
-    # Si hay filtro de variedad, aplicarlo
-    if filtro_variedad:
-        aprovechamiento_flor_query = aprovechamiento_flor_query.filter(Siembra.variedad_id == filtro_variedad)
-    
-    aprovechamiento_flor_query = aprovechamiento_flor_query.group_by(
-        Flor.flor_id,
-        Flor.flor
-    ).having(
-        func.sum(Area.area * Densidad.valor) > 0
-    ).order_by(
-        desc('indice_aprovechamiento')
-    ).all()
-    
+    # Gráfico de aprovechamiento por tipo de flor
     grafico_aprovechamiento_flor = None
-    if aprovechamiento_flor_query:
-        # Crear gráfico circular con matplotlib
+    if datos_flores:
         plt.figure(figsize=(10, 8))
+        flores = [f['flor'] for f in datos_flores]
+        indices = [f['indice_aprovechamiento'] for f in datos_flores]
         
-        # Extraer datos para el gráfico
-        flores = [r.flor for r in aprovechamiento_flor_query]
-        indices = [float(r.indice_aprovechamiento) if r.indice_aprovechamiento is not None else 0.0 for r in aprovechamiento_flor_query]
-        indices = [round(indice, 2) for indice in indices]  # Redondear a 2 decimales
-        
-        # DEBUG: Imprimir valores para verificación
-        print("DEBUG - Índices de aprovechamiento por tipo de flor:")
-        for f, i in zip(flores, indices):
-            print(f"{f}: {i}%")
-        
-        # Asegurar que hay valores válidos para el gráfico circular
+        # Verificar que hay valores válidos para el gráfico circular
         if flores and all(indice > 0 for indice in indices):
-            # Crear gráfico circular
             plt.pie(indices, labels=flores, autopct='%1.1f%%', 
                     startangle=90, shadow=False, 
                     wedgeprops={'edgecolor': 'w', 'linewidth': 1})
             
-            plt.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle
+            plt.axis('equal')
             
-            # Ajustar título si hay filtro de variedad
+            # Ajustar título según variedad filtrada
             if filtro_variedad and variedad_seleccionada:
                 plt.title(f'Aprovechamiento por Tipo de Flor: {variedad_seleccionada.variedad}')
             else:
@@ -539,11 +403,36 @@ def dashboard():
             plt.close()
         else:
             plt.close()
-            # No hay datos o hay valores negativos/cero que no funcionan en un gráfico circular
-            grafico_aprovechamiento_flor = None
+    
+    # Últimos cortes y siembras
+    ultimos_cortes_query = Corte.query.order_by(Corte.fecha_corte.desc())
+    ultimas_siembras_query = Siembra.query.order_by(Siembra.fecha_siembra.desc())
+    
+    if filtro_variedad:
+        ultimos_cortes_query = ultimos_cortes_query.join(Siembra).filter(Siembra.variedad_id == filtro_variedad)
+        ultimas_siembras_query = ultimas_siembras_query.filter(Siembra.variedad_id == filtro_variedad)
+        
+    ultimos_cortes = ultimos_cortes_query.limit(5).all()
+    ultimas_siembras = ultimas_siembras_query.limit(5).all()
     
     # Obtener lista de variedades para el selector
     variedades_list = Variedad.query.order_by(Variedad.variedad).all()
+    
+    # Agrupar todas las estadísticas
+    stats = {
+        'siembras_activas': siembras_activas,
+        'total_siembras': total_siembras,
+        'siembras_historicas': siembras_historicas,
+        'promedio_cortes': promedio_cortes,
+        'indice_aprovechamiento': indice_aprovechamiento,
+        'total_variedades': total_variedades,
+        'filtro_tiempo': filtro_tiempo,
+        'filtro_anio': filtro_anio,
+        'filtro_mes': filtro_mes,
+        'filtro_semana': filtro_semana,
+        'filtro_variedad': filtro_variedad,
+        'variedad_seleccionada': variedad_seleccionada
+    }
     
     return render_template('dashboard.html', 
                           title='Dashboard', 
