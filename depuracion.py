@@ -245,11 +245,24 @@ def update_models_remove_obsolete_refs(backup_dir):
     with open(models_path, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Patrones para reemplazar
+    # Verificar la importación actual
+    login_import_pattern = r'from app import (\w+(?:, \w+)*)'
+    login_match = re.search(login_import_pattern, content)
+    
+    if login_match:
+        imports = login_match.group(1).split(', ')
+        if 'login' in imports and 'db' in imports:
+            # La importación ya está correcta, no la modificamos
+            pass
+        elif 'login' not in imports:
+            # No modificamos si login no está presente
+            pass
+        else:
+            # Puede que tengamos que modificar algo, pero con cuidado
+            print_warning("Se encontró una importación de 'login', pero no se modificará para evitar errores")
+    
+    # Patrones para reemplazar (sin modificar las importaciones)
     replacements = [
-        # Eliminar importaciones de clases obsoletas
-        (r'from app import db, login\s*', 'from app import db, login\n'),
-        
         # Eliminar clase Causa si existe
         (r'class Causa\(db\.Model\):.*?(?=class)', '', re.DOTALL),
         
@@ -782,28 +795,55 @@ def update_init_files(backup_dir):
             with open(init_file, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Si es el archivo init principal de la aplicación, verificar importaciones necesarias
+            # Si es el archivo init principal de la aplicación, verificar la definición del objeto login
             if module_path == "app":
-                required_imports = [
-                    "from flask import Flask",
-                    "from flask_sqlalchemy import SQLAlchemy",
-                    "from flask_login import LoginManager"
-                ]
-                
-                missing_imports = [imp for imp in required_imports if imp not in content]
-                
-                if missing_imports:
+                # Verificar si login_manager está definido
+                if "login_manager = LoginManager()" not in content:
+                    needs_update = False
+                    
+                    # Verificar si ya hay importación de LoginManager
+                    has_login_manager_import = "from flask_login import LoginManager" in content
+                    
+                    # Verificar si db está definido
+                    has_db_definition = "db = SQLAlchemy()" in content
+                    
+                    # No modificar si no encontramos estas definiciones básicas
+                    if not has_db_definition:
+                        print_warning(f"No se encontró definición de 'db' en {init_file}, se omitirá la actualización")
+                        continue
+                    
                     # Hacer backup
                     create_file_backup(init_file, backup_dir)
                     
-                    # Añadir importaciones faltantes
-                    with open(init_file, 'w', encoding='utf-8') as f:
-                        for imp in missing_imports:
-                            f.write(imp + "\n")
-                        f.write(content)
+                    # Preparar nuevas líneas para añadir si es necesario
+                    new_lines = []
                     
-                    print_success(f"Actualizadas importaciones en {init_file}")
-                    count += 1
+                    if not has_login_manager_import:
+                        new_lines.append("from flask_login import LoginManager")
+                    
+                    new_lines.append("\n# Configuración de login")
+                    new_lines.append("login_manager = LoginManager()")
+                    new_lines.append("login_manager.login_view = 'auth.login'")
+                    new_lines.append("login_manager.login_message = 'Por favor inicie sesión para acceder a esta página'")
+                    new_lines.append("login_manager.login_message_category = 'info'")
+                    
+                    # Buscar el punto de inserción más adecuado (después de db = SQLAlchemy())
+                    if "db = SQLAlchemy()" in content:
+                        insertion_point = content.find("db = SQLAlchemy()") + len("db = SQLAlchemy()")
+                        # Buscar el próximo salto de línea
+                        next_newline = content.find("\n", insertion_point)
+                        if next_newline != -1:
+                            insertion_point = next_newline
+                        
+                        # Insertar el nuevo contenido
+                        new_content = content[:insertion_point] + "\n" + "\n".join(new_lines) + content[insertion_point:]
+                        
+                        # Guardar el archivo
+                        with open(init_file, 'w', encoding='utf-8') as f:
+                            f.write(new_content)
+                        
+                        print_success(f"Actualizado {init_file} con configuración de login_manager")
+                        count += 1
     
     print(f"\nTotal de archivos __init__.py actualizados: {count}")
     return count

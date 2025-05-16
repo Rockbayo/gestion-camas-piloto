@@ -9,10 +9,6 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 
-# Exportar login para compatibility con modelos
-login = login_manager
-
-
 # Inicialización de extensiones
 db = SQLAlchemy()
 migrate = Migrate()
