@@ -1,154 +1,300 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">Dashboard</h1>
-    
-    <!-- Tarjetas de Estadísticas -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-leaf fa-fw"></i> Siembras Totales</h5>
-                    <p class="card-text display-4">{{ stats.total_siembras }}</p>
-                    <div class="d-flex justify-content-between small">
-                        <span>Activas: {{ stats.siembras_activas }}</span>
-                        <span>Históricas: {{ stats.siembras_historicas }}</span>
+
+<div class="container"> <h1 class="mb-4">Dashboard</h1>
+<!-- Panel de Filtros por Tiempo -->
+<div class="card mb-4 shadow">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0"><i class="fas fa-filter"></i> Filtros</h5>
+        <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFilters">
+            <i class="fas fa-chevron-down"></i>
+        </button>
+    </div>
+    <div class="collapse show" id="collapseFilters">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('main.dashboard') }}" id="filtroForm">
+                <div class="row">
+                    <!-- Filtro de Tiempo -->
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Periodo:</label>
+                        <select name="filtro_tiempo" id="filtro_tiempo" class="form-select" onchange="actualizarFiltros()">
+                            <option value="todo" {% if stats.filtro_tiempo == 'todo' %}selected{% endif %}>Todo el histórico</option>
+                            <option value="anio" {% if stats.filtro_tiempo == 'anio' %}selected{% endif %}>Por año</option>
+                            <option value="mes" {% if stats.filtro_tiempo == 'mes' %}selected{% endif %}>Por mes</option>
+                            <option value="semana" {% if stats.filtro_tiempo == 'semana' %}selected{% endif %}>Por semana</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro de Año -->
+                    <div class="col-md-3 mb-3 filtro-anio" {% if stats.filtro_tiempo not in ['anio', 'mes', 'semana'] %}style="display: none;"{% endif %}>
+                        <label class="form-label">Año:</label>
+                        <select name="filtro_anio" id="filtro_anio" class="form-select" onchange="actualizarFiltros()">
+                            <!-- Generar opciones desde 5 años atrás hasta 2 años adelante -->
+                            {% set anio_actual = now('%Y')|int %}
+                            {% for anio in range(anio_actual - 5, anio_actual + 3) %}
+                                <option value="{{ anio }}" {% if stats.filtro_anio == anio %}selected{% endif %}>{{ anio }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro de Mes -->
+                    <div class="col-md-3 mb-3 filtro-mes" {% if stats.filtro_tiempo != 'mes' %}style="display: none;"{% endif %}>
+                        <label class="form-label">Mes:</label>
+                        <select name="filtro_mes" id="filtro_mes" class="form-select">
+                            <option value="1" {% if stats.filtro_mes == 1 %}selected{% endif %}>Enero</option>
+                            <option value="2" {% if stats.filtro_mes == 2 %}selected{% endif %}>Febrero</option>
+                            <option value="3" {% if stats.filtro_mes == 3 %}selected{% endif %}>Marzo</option>
+                            <option value="4" {% if stats.filtro_mes == 4 %}selected{% endif %}>Abril</option>
+                            <option value="5" {% if stats.filtro_mes == 5 %}selected{% endif %}>Mayo</option>
+                            <option value="6" {% if stats.filtro_mes == 6 %}selected{% endif %}>Junio</option>
+                            <option value="7" {% if stats.filtro_mes == 7 %}selected{% endif %}>Julio</option>
+                            <option value="8" {% if stats.filtro_mes == 8 %}selected{% endif %}>Agosto</option>
+                            <option value="9" {% if stats.filtro_mes == 9 %}selected{% endif %}>Septiembre</option>
+                            <option value="10" {% if stats.filtro_mes == 10 %}selected{% endif %}>Octubre</option>
+                            <option value="11" {% if stats.filtro_mes == 11 %}selected{% endif %}>Noviembre</option>
+                            <option value="12" {% if stats.filtro_mes == 12 %}selected{% endif %}>Diciembre</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Filtro de Semana -->
+                    <div class="col-md-3 mb-3 filtro-semana" {% if stats.filtro_tiempo != 'semana' %}style="display: none;"{% endif %}>
+                        <label class="form-label">Semana:</label>
+                        <select name="filtro_semana" id="filtro_semana" class="form-select">
+                            {% for semana in range(1, 53) %}
+                                <option value="{{ semana }}" {% if stats.filtro_semana == semana %}selected{% endif %}>Semana {{ semana }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Botones de Acción -->
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="form-group mb-3 w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Aplicar Filtros
+                            </button>
+                            <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary ms-2">
+                                <i class="fas fa-undo"></i> Limpiar
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-cut fa-fw"></i> Total Cortes</h5>
-                    <p class="card-text display-4">{{ stats.total_cortes }}</p>
+    </div>
+</div>
+
+<!-- Botón para limpiar base de datos (solo visible para administradores) -->
+{% if current_user.has_role('admin') or current_user.has_permission('importar_datos') %}
+<div class="mb-4">
+    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#limpiarDBModal">
+        <i class="fas fa-trash"></i> Limpiar Base de Datos
+    </button>
+</div>
+
+<!-- Modal Confirmación Limpiar BD -->
+<div class="modal fade" id="limpiarDBModal" tabindex="-1" aria-labelledby="limpiarDBModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="limpiarDBModalLabel">Confirmar Limpieza de Base de Datos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>ADVERTENCIA:</strong> Esta acción eliminará permanentemente todos los registros de cortes y siembras del sistema. Esta acción no se puede deshacer.
                 </div>
+                <p>¿Está seguro de que desea continuar?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form action="{{ url_for('main.limpiar_db') }}" method="POST" style="display: inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Sí, Limpiar Base de Datos</button>
+                </form>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-seedling fa-fw"></i> Total Tallos</h5>
-                    <p class="card-text display-4">{{ "{:,}".format(stats.total_tallos) }}</p>
-                    <small>Promedio: {{ stats.promedio_tallos }} por siembra</small>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-white h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-th fa-fw"></i> Variedades</h5>
-                    <p class="card-text display-4">{{ stats.total_variedades }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Periodo que se está visualizando -->
+<div class="alert alert-info mb-4">
+    <i class="fas fa-info-circle"></i> <strong>Periodo visualizado:</strong> 
+    {% if stats.filtro_tiempo == 'todo' %}
+        Todo el histórico
+    {% elif stats.filtro_tiempo == 'anio' %}
+        Año {{ stats.filtro_anio }}
+    {% elif stats.filtro_tiempo == 'mes' %}
+        {% set meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'] %}
+        {{ meses[stats.filtro_mes - 1] }} {{ stats.filtro_anio }}
+    {% elif stats.filtro_tiempo == 'semana' %}
+        Semana {{ stats.filtro_semana }} del {{ stats.filtro_anio }}
+    {% endif %}
+</div>
+
+<!-- Tarjetas de Estadísticas Principales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white h-100 shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-leaf fa-fw"></i> Siembras</h5>
+                <p class="card-text display-4">{{ stats.total_siembras }}</p>
+                <div class="d-flex justify-content-between small">
+                    <span>Activas: {{ stats.siembras_activas }}</span>
+                    <span>Históricas: {{ stats.siembras_historicas }}</span>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Indicador de integración de datos -->
-    <div class="alert alert-success mb-4">
-        <i class="fas fa-info-circle"></i> <strong>Datos integrados:</strong> Las estadísticas y gráficos incluyen tanto los datos nuevos como los datos históricos importados.
-    </div>
-    
-    <div class="row">
-        <!-- Gráfico de Producción por Variedad -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Top 5 Variedades por Producción</h5>
-                </div>
-                <div class="card-body">
-                    {% if grafico_produccion %}
-                    <img src="data:image/png;base64,{{ grafico_produccion }}" class="img-fluid" alt="Gráfico de producción por variedad">
-                    {% else %}
-                    <div class="alert alert-info">
-                        No hay datos suficientes para generar el gráfico.
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Gráfico de Tendencia Mensual (Nuevo) -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-chart-line"></i> Tendencia de Producción Mensual</h5>
-                </div>
-                <div class="card-body">
-                    {% if tendencia_mensual %}
-                    <img src="data:image/png;base64,{{ tendencia_mensual }}" class="img-fluid" alt="Gráfico de tendencia mensual">
-                    {% else %}
-                    <div class="alert alert-info">
-                        No hay datos suficientes para generar el gráfico.
-                    </div>
-                    {% endif %}
-                </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white h-100 shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-cut fa-fw"></i> Promedio de Cortes</h5>
+                <p class="card-text display-4">{{ stats.promedio_cortes }}</p>
+                <small>Cortes promedio por siembra</small>
             </div>
         </div>
     </div>
-    
-    <div class="row">
-        <!-- Últimos Cortes -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-cut"></i> Últimos Cortes (Nuevos + Históricos)</h5>
-                </div>
-                <div class="card-body">
-                    {% if ultimos_cortes %}
-                    <div class="list-group">
-                        {% for corte in ultimos_cortes %}
-                        <a href="{{ url_for('siembras.detalles', id=corte.siembra_id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ corte.siembra.variedad.variedad }}</h6>
-                                <small>{{ corte.fecha_corte|dateformat }}</small>
-                            </div>
-                            <p class="mb-1">Corte #{{ corte.num_corte }} - {{ corte.cantidad_tallos }} tallos</p>
-                            <small>{{ corte.siembra.bloque_cama.ubicacion_completa }}</small>
-                        </a>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        No hay cortes registrados.
-                    </div>
-                    {% endif %}
-                </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white h-100 shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-percentage fa-fw"></i> Aprovechamiento</h5>
+                <p class="card-text display-4">{{ stats.indice_aprovechamiento }}%</p>
+                <small>% de tallos cosechados sobre sembrados</small>
             </div>
         </div>
-        
-        <!-- Últimas Siembras -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0"><i class="fas fa-seedling"></i> Últimas Siembras (Nuevas + Históricas)</h5>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white h-100 shadow">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-th fa-fw"></i> Variedades</h5>
+                <p class="card-text display-4">{{ stats.total_variedades }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos de Aprovechamiento -->
+<div class="row">
+    <!-- Gráfico de Aprovechamiento por Variedad -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-bar"></i> Top 5 Variedades por Aprovechamiento</h5>
+            </div>
+            <div class="card-body">
+                {% if grafico_aprovechamiento_variedad %}
+                <img src="data:image/png;base64,{{ grafico_aprovechamiento_variedad }}" class="img-fluid" alt="Gráfico de aprovechamiento por variedad">
+                {% else %}
+                <div class="alert alert-info">
+                    No hay datos suficientes para generar el gráfico.
                 </div>
-                <div class="card-body">
-                    {% if ultimas_siembras %}
-                    <div class="list-group">
-                        {% for siembra in ultimas_siembras %}
-                        <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ siembra.variedad.variedad }}</h6>
-                                <small>{{ siembra.fecha_siembra|dateformat }}</small>
-                            </div>
-                            <p class="mb-1">{{ siembra.bloque_cama.ubicacion_completa }}</p>
-                            <div class="d-flex justify-content-between">
-                                <small>Estado: <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></small>
-                                <small>Cortes: {{ siembra.cortes|length }}</small>
-                            </div>
-                        </a>
-                        {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico de Aprovechamiento por Tipo de Flor -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-pie"></i> Aprovechamiento por Tipo de Flor</h5>
+            </div>
+            <div class="card-body">
+                {% if grafico_aprovechamiento_flor %}
+                <img src="data:image/png;base64,{{ grafico_aprovechamiento_flor }}" class="img-fluid" alt="Gráfico de aprovechamiento por tipo de flor">
+                {% else %}
+                <div class="alert alert-info">
+                    No hay datos suficientes para generar el gráfico.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Gráfico de Aprovechamiento por Bloque -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="fas fa-th-large"></i> Aprovechamiento por Bloque</h5>
+            </div>
+            <div class="card-body">
+                {% if grafico_aprovechamiento_bloque %}
+                <img src="data:image/png;base64,{{ grafico_aprovechamiento_bloque }}" class="img-fluid" alt="Gráfico de aprovechamiento por bloque">
+                {% else %}
+                <div class="alert alert-info">
+                    No hay datos suficientes para generar el gráfico.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Últimas Actividades (listado combinado de siembras y cortes recientes) -->
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 shadow">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0"><i class="fas fa-history"></i> Últimas Actividades</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3">Últimos Cortes</h6>
+                        {% if ultimos_cortes %}
+                        <div class="list-group small">
+                            {% for corte in ultimos_cortes %}
+                            <a href="{{ url_for('siembras.detalles', id=corte.siembra_id) }}" class="list-group-item list-group-item-action py-2">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1 text-truncate">{{ corte.siembra.variedad.variedad|truncate(20) }}</h6>
+                                    <span class="badge bg-secondary">{{ corte.fecha_corte|dateformat('%d/%m/%Y') }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small>Corte #{{ corte.num_corte }}</small>
+                                    <small>{{ corte.cantidad_tallos }} tallos</small>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info py-2">
+                            No hay cortes registrados.
+                        </div>
+                        {% endif %}
                     </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        No hay siembras registradas.
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3">Últimas Siembras</h6>
+                        {% if ultimas_siembras %}
+                        <div class="list-group small">
+                            {% for siembra in ultimas_siembras %}
+                            <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="list-group-item list-group-item-action py-2">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1 text-truncate">{{ siembra.variedad.variedad|truncate(20) }}</h6>
+                                    <span class="badge bg-secondary">{{ siembra.fecha_siembra|dateformat('%d/%m/%Y') }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <small>{{ siembra.bloque_cama.ubicacion_completa }}</small>
+                                    <small class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</small>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info py-2">
+                            No hay siembras registradas.
+                        </div>
+                        {% endif %}
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+</div>
+{% block scripts %}
+
+<script> // Función para mostrar/ocultar filtros según la selección function actualizarFiltros() { const filtroTiempo = document.getElementById('filtro_tiempo').value; // Mostrar/ocultar filtro de año const filtroAnio = document.querySelector('.filtro-anio'); if (filtroTiempo === 'todo') { filtroAnio.style.display = 'none'; } else { filtroAnio.style.display = 'block'; } // Mostrar/ocultar filtro de mes const filtroMes = document.querySelector('.filtro-mes'); filtroMes.style.display = (filtroTiempo === 'mes') ? 'block' : 'none'; // Mostrar/ocultar filtro de semana const filtroSemana = document.querySelector('.filtro-semana'); filtroSemana.style.display = (filtroTiempo === 'semana') ? 'block' : 'none'; } // Inicializar filtros al cargar la página document.addEventListener('DOMContentLoaded', function() { actualizarFiltros(); }); </script>
+{% endblock %} {% endblock %}
+
