@@ -9,10 +9,6 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 
-# Exportar login para compatibility con modelos
-login = login_manager
-
-
 # Inicialización de extensiones
 db = SQLAlchemy()
 migrate = Migrate()
@@ -20,6 +16,8 @@ login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
 login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
 csrf = CSRFProtect()
+
+# Quitar la línea problemática: login = login_manager
 
 # Definir funciones auxiliares antes de create_app
 def register_error_handlers(app):

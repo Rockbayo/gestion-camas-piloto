@@ -2,8 +2,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from app import db, login
-_manager
+from app import db, login_manager
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import text
 
