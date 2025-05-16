@@ -1,6 +1,3 @@
-import matplotlib
-matplotlib.use('Agg')  # Configurar backend no interactivo
-
 from flask import render_template, flash, redirect, url_for, request, current_app, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc, extract, and_
@@ -15,7 +12,7 @@ from app.main import bp
 from app.utils.data_utils import calc_indice_aprovechamiento, safe_int, safe_float, to_float, calc_percentage
 from app.models import (
     Siembra, Corte, Variedad, Flor, Color, FlorColor, 
-    BloqueCamaLado, Bloque, Cama, Lado, Area, Densidad
+    BloqueCamaLado, Bloque, Area, Densidad
 )
 
 @bp.route('/')
@@ -35,7 +32,160 @@ def dashboard():
     filtro_semana = request.args.get('filtro_semana', None, type=int)
     filtro_variedad = request.args.get('variedad_id', None, type=int)
     
-    # ... (código existente) ...
+    # Consulta para obtener datos básicos
+    query = db.session.query(
+        Siembra.siembra_id,
+        Siembra.fecha_siembra,
+        Siembra.estado,
+        Variedad.variedad_id,
+        Variedad.variedad,
+        Flor.flor_id,
+        Flor.flor,
+        Color.color_id,
+        Color.color,
+        Bloque.bloque_id,
+        Bloque.bloque,
+        func.count(Corte.corte_id).label('total_cortes'),
+        func.sum(Corte.cantidad_tallos).label('total_tallos'),
+        Area.area,
+        Densidad.valor.label('densidad'),
+        func.count(func.distinct(Siembra.siembra_id)).label('total_siembras')
+    ).join(
+        Siembra.variedad
+    ).join(
+        Variedad.flor_color
+    ).join(
+        FlorColor.flor
+    ).join(
+        FlorColor.color
+    ).join(
+        Siembra.bloque_cama
+    ).join(
+        BloqueCamaLado.bloque
+    ).join(
+        Siembra.area
+    ).join(
+        Siembra.densidad
+    ).outerjoin(
+        Corte, Siembra.siembra_id == Corte.siembra_id
+    )
+    
+    # Aplicar filtros según los parámetros
+    if filtro_variedad:
+        query = query.filter(Variedad.variedad_id == filtro_variedad)
+        variedad_seleccionada = Variedad.query.get(filtro_variedad)
+    else:
+        variedad_seleccionada = None
+    
+    # Aplicar filtros de tiempo
+    if filtro_tiempo == 'anio':
+        query = query.filter(extract('year', Siembra.fecha_siembra) == filtro_anio)
+    elif filtro_tiempo == 'mes':
+        query = query.filter(
+            and_(
+                extract('year', Siembra.fecha_siembra) == filtro_anio,
+                extract('month', Siembra.fecha_siembra) == filtro_mes
+            )
+        )
+    elif filtro_tiempo == 'semana' and filtro_semana:
+        # Filtrar por semana requiere un cálculo más complejo
+        fecha_inicio = datetime.strptime(f'{filtro_anio}-W{filtro_semana}-1', '%Y-W%W-%w')
+        fecha_fin = fecha_inicio + timedelta(days=6)
+        query = query.filter(Siembra.fecha_siembra.between(fecha_inicio, fecha_fin))
+    
+    # Agrupar y ordenar los resultados
+    query = query.group_by(
+        Siembra.siembra_id,
+        Siembra.fecha_siembra,
+        Siembra.estado,
+        Variedad.variedad_id,
+        Variedad.variedad,
+        Flor.flor_id,
+        Flor.flor,
+        Color.color_id,
+        Color.color,
+        Bloque.bloque_id,
+        Bloque.bloque,
+        Area.area,
+        Densidad.valor
+    ).order_by(desc('total_tallos'))
+    
+    # Ejecutar la consulta
+    datos_brutos = query.all()
+    
+    # Cálculos iniciales de estadísticas
+    siembras_activas = Siembra.query.filter_by(estado='Activa').count()
+    siembras_historicas = Siembra.query.filter_by(estado='Finalizada').count()
+    total_siembras = siembras_activas + siembras_historicas
+    total_variedades = Variedad.query.count()
+    
+    # Calcular promedio de cortes por siembra
+    if total_siembras > 0:
+        total_cortes = Corte.query.count()
+        promedio_cortes = round(total_cortes / total_siembras, 1)
+    else:
+        promedio_cortes = 0
+    
+    # 1. Obtener total de tallos cortados - con los mismos filtros
+    total_tallos_query = db.session.query(func.sum(Corte.cantidad_tallos)).select_from(Corte).\
+        join(Siembra, Corte.siembra_id == Siembra.siembra_id)
+    
+    # Aplicar los filtros a la consulta de tallos
+    if filtro_variedad:
+        total_tallos_query = total_tallos_query.filter(Siembra.variedad_id == filtro_variedad)
+    
+    if filtro_tiempo == 'anio':
+        total_tallos_query = total_tallos_query.filter(extract('year', Siembra.fecha_siembra) == filtro_anio)
+    elif filtro_tiempo == 'mes':
+        total_tallos_query = total_tallos_query.filter(
+            and_(
+                extract('year', Siembra.fecha_siembra) == filtro_anio,
+                extract('month', Siembra.fecha_siembra) == filtro_mes
+            )
+        )
+    elif filtro_tiempo == 'semana' and filtro_semana:
+        fecha_inicio = datetime.strptime(f'{filtro_anio}-W{filtro_semana}-1', '%Y-W%W-%w')
+        fecha_fin = fecha_inicio + timedelta(days=6)
+        total_tallos_query = total_tallos_query.filter(Siembra.fecha_siembra.between(fecha_inicio, fecha_fin))
+    
+    # Ejecutar la consulta para obtener el total de tallos
+    total_tallos = total_tallos_query.scalar() or 0
+    
+    # 2. Calcular total de plantas de manera más precisa
+    # Consulta para calcular total de plantas sembradas
+    total_plantas_query = db.session.query(
+        func.sum(Area.area * Densidad.valor).label('total_plantas')
+    ).select_from(Siembra).\
+        join(Area, Siembra.area_id == Area.area_id).\
+        join(Densidad, Siembra.densidad_id == Densidad.densidad_id)
+    
+    # Aplicar los mismos filtros que se aplicaron a la consulta principal
+    if filtro_variedad:
+        total_plantas_query = total_plantas_query.filter(Siembra.variedad_id == filtro_variedad)
+    
+    if filtro_tiempo == 'anio':
+        total_plantas_query = total_plantas_query.filter(extract('year', Siembra.fecha_siembra) == filtro_anio)
+    elif filtro_tiempo == 'mes':
+        total_plantas_query = total_plantas_query.filter(
+            and_(
+                extract('year', Siembra.fecha_siembra) == filtro_anio,
+                extract('month', Siembra.fecha_siembra) == filtro_mes
+            )
+        )
+    elif filtro_tiempo == 'semana' and filtro_semana:
+        fecha_inicio = datetime.strptime(f'{filtro_anio}-W{filtro_semana}-1', '%Y-W%W-%w')
+        fecha_fin = fecha_inicio + timedelta(days=6)
+        total_plantas_query = total_plantas_query.filter(Siembra.fecha_siembra.between(fecha_inicio, fecha_fin))
+    
+    # Ejecutar la consulta para calcular el total de plantas
+    total_plantas = total_plantas_query.scalar() or 0
+    
+    # 3. Calcular el índice de aprovechamiento
+    # Asegurarse de manejar el caso cuando total_plantas sea cero
+    if total_plantas > 0:
+        indice_aprovechamiento = round((total_tallos / total_plantas) * 100, 2)
+    else:
+        indice_aprovechamiento = 0
     
     # 3. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR VARIEDAD
     # Agrupar datos por variedad con manejo consistente de tipos numéricos
@@ -55,7 +205,8 @@ def dashboard():
         # Usar safe_int en lugar de to_int
         datos_por_variedad[d.variedad_id]['total_tallos'] += safe_int(d.total_tallos)
         # Usar safe_float en lugar de to_float
-        datos_por_variedad[d.variedad_id]['total_plantas'] += safe_float(d.total_plantas)
+        plantas_calculadas = safe_float(d.area) * safe_float(d.densidad) if d.area and d.densidad else 0
+        datos_por_variedad[d.variedad_id]['total_plantas'] += plantas_calculadas
         datos_por_variedad[d.variedad_id]['total_siembras'] += safe_int(d.total_siembras)
     
     # Calcular índices para cada variedad de manera consistente
@@ -75,8 +226,10 @@ def dashboard():
                 'total_siembras': datos['total_siembras']
             })
     
-    # ... (resto del código igual)
-
+    # Ordenar por índice y limitar a top 5
+    datos_variedades.sort(key=lambda x: x['indice_aprovechamiento'], reverse=True)
+    top_variedades = datos_variedades[:5]
+    
     # 4. CALCULAR DATOS PARA GRÁFICO DE APROVECHAMIENTO POR TIPO DE FLOR
     datos_por_flor = {}
     for d in datos_brutos:
@@ -91,9 +244,9 @@ def dashboard():
         
         # Usar safe_int y safe_float
         datos_por_flor[d.flor_id]['total_tallos'] += safe_int(d.total_tallos)
-        datos_por_flor[d.flor_id]['total_plantas'] += safe_float(d.total_plantas)
+        plantas_calculadas = safe_float(d.area) * safe_float(d.densidad) if d.area and d.densidad else 0
+        datos_por_flor[d.flor_id]['total_plantas'] += plantas_calculadas
         datos_por_flor[d.flor_id]['total_siembras'] += safe_int(d.total_siembras)
-    
     
     # Calcular índices para cada tipo de flor
     datos_flores = []
@@ -123,7 +276,8 @@ def dashboard():
         
         # Usar safe_int y safe_float
         datos_por_bloque[d.bloque_id]['total_tallos'] += safe_int(d.total_tallos)
-        datos_por_bloque[d.bloque_id]['total_plantas'] += safe_float(d.total_plantas)
+        plantas_calculadas = safe_float(d.area) * safe_float(d.densidad) if d.area and d.densidad else 0
+        datos_por_bloque[d.bloque_id]['total_plantas'] += plantas_calculadas
         datos_por_bloque[d.bloque_id]['total_siembras'] += safe_int(d.total_siembras)
     
     # Calcular índices para cada bloque
