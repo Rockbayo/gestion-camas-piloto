@@ -66,7 +66,50 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Variedad:</label>
+                        <select name="variedad_id" id="filtro_variedad" class="form-select">
+                            <option value="">Todas las variedades</option>
+                            {% for variedad in variedades %}
+                                <option value="{{ variedad.variedad_id }}" {% if stats.filtro_variedad == variedad.variedad_id %}selected{% endif %}>
+                                    {{ variedad.variedad }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Opcional: Agregar badge de filtro activo si hay variedad seleccionada -->
+                    {% if stats.variedad_seleccionada %}
+                    <div class="col-12 mb-2">
+                        <span class="badge bg-info">
+                            <i class="fas fa-filter"></i> Filtrando por variedad: {{ stats.variedad_seleccionada.variedad }}
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Añadir a la parte del script existente -->
+                    <script>
+                        // Asegúrate de que este código se agregue dentro del bloque de script existente o se cree uno nuevo
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Código existente...
+                            
+                            // Manejar cambio en selector de variedad
+                            const variedadSelect = document.getElementById('filtro_variedad');
+                            if (variedadSelect) {
+                                variedadSelect.addEventListener('change', function() {
+                                    // Actualizar la URL con el nuevo filtro
+                                    const url = new URL(window.location);
+                                    if (this.value) {
+                                        url.searchParams.set('variedad_id', this.value);
+                                    } else {
+                                        url.searchParams.delete('variedad_id');
+                                    }
+                                    window.location.href = url.toString();
+                                });
+                            }
+                        });
+                    </script>
                     <!-- Botones de Acción -->
                     <div class="col-md-3 d-flex align-items-end">
                         <div class="form-group mb-3 w-100">
