@@ -40,7 +40,7 @@ class SiembraForm(FlaskForm):
         # Camas ordenadas numéricamente (convertir a entero para ordenar correctamente)
         camas = Cama.query.all()
         # Ordenar numéricamente en lugar de alfabéticamente
-        camas_ordenadas = sorted(camas, key=lambda c: int(c.cama) if c.cama.isdigit() else c.cama)
+        camas_ordenadas = sorted(camas, key=lambda c: str(c.cama) if c.cama.isdigit() else c.cama)
         self.cama_id.choices = [(c.cama_id, c.cama) for c in camas_ordenadas]
         
         # Lados ordenados alfabéticamente
