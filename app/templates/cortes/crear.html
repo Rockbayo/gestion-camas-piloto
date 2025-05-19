@@ -1,5 +1,5 @@
-{% block title %}Registrar Corte{% endblock %}
 {% extends "base.html" %}
+{% block title %}Registrar Corte{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -11,78 +11,14 @@
         </a>
     </div>
     
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Detalles de Siembra</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>ID:</strong> {{ siembra.siembra_id }}</p>
-                    <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
-                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat('%d-%m-%Y') }}</p>
-                    <p><strong>Fecha Inicio de Corte:</strong>
-                        {{ siembra.fecha_inicio_corte|dateformat('%d-%m-%Y') }}
-                    </p>
-                    <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
-                </div>
-            </div>
-            
-            <!-- Información de disponibilidad -->
-            <div class="alert {% if tallos_disponibles <= 0 %}alert-danger{% elif tallos_disponibles < total_plantas_sembradas * 0.1 %}alert-warning{% else %}alert-info{% endif %} mt-3">
-                <p class="mb-0"><strong>Total de plantas sembradas:</strong> {{ total_plantas_sembradas }}</p>
-                <p class="mb-0"><strong>Total de tallos ya cortados:</strong> {{ total_tallos_actuales }}</p>
-                <p class="mb-0"><strong>Tallos disponibles para cortar:</strong> <span class="fw-bold">{{ tallos_disponibles }}</span></p>
-            </div>
-        </div>
-    </div>
+    {% include "components/_siembra_card.html" %}
     
     <div class="card mt-4 shadow">
         <div class="card-header bg-success text-white">
             <h5 class="card-title mb-0">Formulario de Registro de Corte</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="">
-                {{ form.hidden_tag() }}
-                {{ form.siembra_id }}
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.num_corte.label(class="form-label") }}
-                            {{ form.num_corte(class="form-control", readonly=(form.num_corte.data != None)) }}
-                            {% for error in form.num_corte.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.fecha_corte.label(class="form-label") }}
-                            {{ form.fecha_corte(class="form-control", type="date") }}
-                            {% for error in form.fecha_corte.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group mb-3">
-                    {{ form.cantidad_tallos.label(class="form-label") }}
-                    {{ form.cantidad_tallos(class="form-control") }}
-                    {% for error in form.cantidad_tallos.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
-                    {{ form.submit(class="btn btn-primary") }}
-                </div>
-            </form>
+            {% include "components/_corte_form.html" %}
         </div>
     </div>
 </div>

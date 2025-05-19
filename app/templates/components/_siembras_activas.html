@@ -1,0 +1,6 @@
+{% set siembras_activas = item.siembras|selectattr('estado', 'equalto', 'Activa')|list %}
+{% if siembras_activas %}
+<span class="badge bg-success">{{ siembras_activas|length }}</span>
+{% else %}
+<span class="badge bg-secondary">0</span>
+{% endif %}

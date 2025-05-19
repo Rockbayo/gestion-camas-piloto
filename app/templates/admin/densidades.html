@@ -19,166 +19,52 @@
         </div>
         <div class="card-body">
             {% if densidades %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Valor (plantas/m²)</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for densidad in densidades %}
-                        <tr>
-                            <td>{{ densidad.densidad_id }}</td>
-                            <td>{{ densidad.densidad }}</td>
-                            <td>{{ densidad.valor }}</td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-warning"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#editarDensidadModal"
-                                        data-id="{{ densidad.densidad_id }}"
-                                        data-nombre="{{ densidad.densidad }}"
-                                        data-valor="{{ densidad.valor }}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#eliminarDensidadModal"
-                                        data-id="{{ densidad.densidad_id }}"
-                                        data-nombre="{{ densidad.densidad }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                {% with table_id='tablaDensidades',
+                        columns=[
+                            {'label': 'ID', 'field': 'densidad_id'},
+                            {'label': 'Nombre', 'field': 'densidad'},
+                            {'label': 'Valor (plantas/m²)', 'field': 'valor'},
+                            {'label': 'Acciones', 'template': 'components/_densidad_actions.html'}
+                        ],
+                        items=densidades
+                %}
+                    {% include "components/_data_table.html" %}
+                {% endwith %}
             {% else %}
-            <div class="alert alert-info">
-                No hay densidades configuradas. Cree una nueva densidad para comenzar.
-            </div>
+                <div class="alert alert-info">
+                    No hay densidades configuradas. Cree una nueva densidad para comenzar.
+                </div>
             {% endif %}
         </div>
     </div>
 
-    <div class="modal fade" id="nuevaDensidadModal" tabindex="-1" aria-labelledby="nuevaDensidadModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title" id="nuevaDensidadModalLabel">Nueva Densidad</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('admin.crear_densidad') }}" method="POST">
-                    {{ form.csrf_token }}  {# Añade el token CSRF aquí #}
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label for="densidad_nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="densidad_nombre" name="densidad" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="densidad_valor" class="form-label">Valor (plantas/m²)</label>
-                            <input type="number" class="form-control" id="densidad_valor" name="valor" step="0.1" min="0.1" required>
-                            <div class="form-text">Número de plantas por metro cuadrado</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-success">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="editarDensidadModal" tabindex="-1" aria-labelledby="editarDensidadModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-warning">
-                    <h5 class="modal-title" id="editarDensidadModalLabel">Editar Densidad</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('admin.editar_densidad') }}" method="POST">
-                    {{ form.csrf_token }}  {# Añade el token CSRF aquí #}
-                    <div class="modal-body">
-                        <input type="hidden" id="editar_densidad_id" name="densidad_id">
-                        <div class="mb-3">
-                            <label for="editar_densidad_nombre" class="form-label">Nombre</label>
-                            <input type="text" class="form-control" id="editar_densidad_nombre" name="densidad" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="editar_densidad_valor" class="form-label">Valor (plantas/m²)</label>
-                            <input type="number" class="form-control" id="editar_densidad_valor" name="valor" step="0.1" min="0.1" required>
-                            <div class="form-text">Número de plantas por metro cuadrado</div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning">Actualizar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="eliminarDensidadModal" tabindex="-1" aria-labelledby="eliminarDensidadModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="eliminarDensidadModalLabel">Eliminar Densidad</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('admin.eliminar_densidad') }}" method="POST">
-                    {{ form.csrf_token }}  {# Añade el token CSRF aquí #}
-                    <div class="modal-body">
-                        <input type="hidden" id="eliminar_densidad_id" name="densidad_id">
-                        <p>¿Está seguro de eliminar la densidad <strong id="eliminar_densidad_nombre"></strong>?</p>
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle"></i> Esta acción no se puede deshacer y puede afectar a siembras existentes.
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-danger">Eliminar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <!-- Modals -->
+    {% include "components/_modal_nueva_densidad.html" %}
+    {% include "components/_modal_editar_densidad.html" %}
+    {% include "components/_modal_eliminar_densidad.html" %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Cargar datos en el modal de edición
     document.addEventListener('DOMContentLoaded', function() {
+        // Configurar modales de edición y eliminación
         const editarModal = document.getElementById('editarDensidadModal');
         if (editarModal) {
             editarModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
-                const id = button.getAttribute('data-id');
-                const nombre = button.getAttribute('data-nombre');
-                const valor = button.getAttribute('data-valor');
-
-                document.getElementById('editar_densidad_id').value = id;
-                document.getElementById('editar_densidad_nombre').value = nombre;
-                document.getElementById('editar_densidad_valor').value = valor;
+                document.getElementById('editar_densidad_id').value = button.getAttribute('data-id');
+                document.getElementById('editar_densidad_nombre').value = button.getAttribute('data-nombre');
+                document.getElementById('editar_densidad_valor').value = button.getAttribute('data-valor');
             });
         }
 
-        // Cargar datos en el modal de eliminación
         const eliminarModal = document.getElementById('eliminarDensidadModal');
         if (eliminarModal) {
             eliminarModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
-                const id = button.getAttribute('data-id');
-                const nombre = button.getAttribute('data-nombre');
-
-                document.getElementById('eliminar_densidad_id').value = id;
-                document.getElementById('eliminar_densidad_nombre').textContent = nombre;
+                document.getElementById('eliminar_densidad_id').value = button.getAttribute('data-id');
+                document.getElementById('eliminar_densidad_nombre').textContent = button.getAttribute('data-nombre');
             });
         }
     });

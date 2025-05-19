@@ -1,0 +1,14 @@
+<!-- app/templates/components/_corte_actions.html -->
+<div class="btn-group">
+    <a href="{{ url_for('siembras.detalles', id=item.siembra_id) }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Ver Siembra">
+        <i class="fas fa-eye"></i>
+    </a>
+    {% if item.siembra.estado == 'Activa' %}
+    <a href="{{ url_for('cortes.editar', id=item.corte_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+        <i class="fas fa-edit"></i>
+    </a>
+    <a href="{{ url_for('cortes.eliminar', id=item.corte_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
+        <i class="fas fa-trash"></i>
+    </a>
+    {% endif %}
+</div>

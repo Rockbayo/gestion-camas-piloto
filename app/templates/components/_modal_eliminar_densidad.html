@@ -1,0 +1,24 @@
+<div class="modal fade" id="eliminarDensidadModal" tabindex="-1" aria-labelledby="eliminarDensidadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="eliminarDensidadModalLabel">Eliminar Densidad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.eliminar_densidad') }}" method="POST">
+                {{ form.csrf_token }}
+                <div class="modal-body">
+                    <input type="hidden" id="eliminar_densidad_id" name="densidad_id">
+                    <p>¿Está seguro de eliminar la densidad <strong id="eliminar_densidad_nombre"></strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Esta acción no se puede deshacer y puede afectar a siembras existentes.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

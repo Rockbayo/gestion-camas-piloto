@@ -44,6 +44,13 @@
                 <a href="{{ url_for('siembras.finalizar', id=siembra.siembra_id) }}" class="btn btn-danger" onclick="return confirm('¿Está seguro de finalizar esta siembra? Esta acción no se puede deshacer.')">
                     <i class="fas fa-flag-checkered"></i> Finalizar Siembra
                 </a>
+                <a href="{{ url_for('perdidas.registrar', siembra_id=siembra.siembra_id) }}" class="btn btn-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Registrar Pérdida
+                </a>
+                {% endif %}
+                <a href="{{ url_for('perdidas.por_siembra', siembra_id=siembra.siembra_id) }}" class="btn btn-info">
+                    <i class="fas fa-list"></i> Ver Pérdidas
+                </a>
                 {% endif %}
                 <!-- Nuevo botón para ver curva de producción -->
                 <a href="{{ url_for('reportes.curva_produccion', variedad_id=siembra.variedad.variedad_id) }}" class="btn btn-info">

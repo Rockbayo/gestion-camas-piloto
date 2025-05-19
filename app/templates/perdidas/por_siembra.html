@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Pérdidas - Siembra #{{ siembra.siembra_id }}</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Siembra
+        </a>
+        <a href="{{ url_for('perdidas.registrar', siembra_id=siembra.siembra_id) }}" class="btn btn-success">
+            <i class="fas fa-plus-circle"></i> Registrar Pérdida
+        </a>
+    </div>
+    
+    <!-- Información de la siembra -->
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Información de Siembra</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
+                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
+                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
+                    <p><strong>Área:</strong> {{ siembra.area.area }} m²</p>
+                    <p><strong>Densidad:</strong> {{ siembra.densidad.valor }} plantas/m²</p>
+                </div>
+            </div>
+            
+            <!-- Estadísticas -->
+            <div class="alert alert-info mt-3">
+                <div class="row">
+                    <div class="col-md-3">
+                        <p class="mb-0"><strong>Total Plantas:</strong> {{ total_plantas }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-0"><strong>Total Tallos:</strong> {{ total_tallos }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-0"><strong>Total Pérdidas:</strong> {{ total_perdidas }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p class="mb-0"><strong>Disponible:</strong> {{ disponible }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico de pérdidas por causa -->
+    {% if perdidas_por_causa %}
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Distribución de Pérdidas por Causa</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Causa</th>
+                            <th>Cantidad</th>
+                            <th>Porcentaje</th>
+                            <th>Visualización</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for causa, total in perdidas_por_causa %}
+                        <tr>
+                            <td>{{ causa }}</td>
+                            <td>{{ total }}</td>
+                            <td>{{ (total / total_perdidas * 100)|round(1) if total_perdidas > 0 else 0 }}%</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-info" role="progressbar" 
+                                         style="width: {{ (total / total_perdidas * 100)|round(1) if total_perdidas > 0 else 0 }}%;" 
+                                         aria-valuenow="{{ (total / total_perdidas * 100)|round(1) if total_perdidas > 0 else 0 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ (total / total_perdidas * 100)|round(1) if total_perdidas > 0 else 0 }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Listado de pérdidas -->
+    <div class="card shadow">
+        <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Registro de Pérdidas</h5>
+        </div>
+        <div class="card-body">
+            {% if perdidas %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Causa</th>
+                            <th>Cantidad</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perdida in perdidas %}
+                        <tr>
+                            <td>{{ perdida.perdida_id }}</td>
+                            <td>{{ perdida.fecha_perdida|dateformat }}</td>
+                            <td>{{ perdida.causa.nombre }}</td>
+                            <td>{{ perdida.cantidad }}</td>
+                            <td>{{ perdida.observaciones|truncate(50) }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    {% if siembra.estado == 'Activa' %}
+                                    <a href="{{ url_for('perdidas.editar', id=perdida.perdida_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('perdidas.eliminar', id=perdida.perdida_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay pérdidas registradas para esta siembra.
+                {% if siembra.estado == 'Activa' %}
+                <a href="{{ url_for('perdidas.registrar', siembra_id=siembra.siembra_id) }}" class="alert-link">Registrar pérdida</a>.
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

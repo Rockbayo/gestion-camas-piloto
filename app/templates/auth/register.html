@@ -1,102 +1,64 @@
-# Plantilla de inicio de sesión
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="card-title text-center"><i class="fas fa-user-plus"></i> Registro de Usuario</h4>
+{% with title="Registro de Usuario", icon="user-plus", card_width="col-md-8" %}
+    {% include "components/_auth_card.html" %}
+        {% block card_body %}
+        <form method="POST" action="" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="row">
+                <!-- Columna izquierda -->
+                <div class="col-md-6">
+                    {% with field=form.username, autocomplete="username" %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.nombre_1 %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.nombre_2 %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.apellido_1 %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.apellido_2 %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="" novalidate>
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    {{ form.username.label(class="form-control-label") }}
-                                    {{ form.username(class="form-control", autocomplete="username") }}
-                                    {% for error in form.username.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.nombre_1.label(class="form-control-label") }}
-                                    {{ form.nombre_1(class="form-control") }}
-                                    {% for error in form.nombre_1.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.nombre_2.label(class="form-control-label") }}
-                                    {{ form.nombre_2(class="form-control") }}
-                                    {% for error in form.nombre_2.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.apellido_1.label(class="form-control-label") }}
-                                    {{ form.apellido_1(class="form-control") }}
-                                    {% for error in form.apellido_1.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.apellido_2.label(class="form-control-label") }}
-                                    {{ form.apellido_2(class="form-control") }}
-                                    {% for error in form.apellido_2.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    {{ form.documento_id.label(class="form-control-label") }}
-                                    {{ form.documento_id(class="form-control") }}
-                                    {% for error in form.documento_id.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.num_doc.label(class="form-control-label") }}
-                                    {{ form.num_doc(class="form-control") }}
-                                    {% for error in form.num_doc.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.cargo.label(class="form-control-label") }}
-                                    {{ form.cargo(class="form-control") }}
-                                    {% for error in form.cargo.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.password.label(class="form-control-label") }}
-                                    {{ form.password(class="form-control", autocomplete="new-password") }}
-                                    {% for error in form.password.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                                <div class="form-group">
-                                    {{ form.password2.label(class="form-control-label") }}
-                                    {{ form.password2(class="form-control", autocomplete="new-password") }}
-                                    {% for error in form.password2.errors %}
-                                    <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group mt-3">
-                            {{ form.submit(class="btn btn-primary btn-block") }}
-                        </div>
-                    </form>
+                
+                <!-- Columna derecha -->
+                <div class="col-md-6">
+                    {% with field=form.documento_id %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.num_doc %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.cargo %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.password, autocomplete="new-password" %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
+                    
+                    {% with field=form.password2, autocomplete="new-password" %}
+                        {% include "components/_form_field.html" %}
+                    {% endwith %}
                 </div>
             </div>
-        </div>
-    </div>
-</div>
+            
+            {% with label="Registrarse", icon="user-plus" %}
+                {% include "components/_submit_button.html" %}
+            {% endwith %}
+        </form>
+        {% endblock %}
+{% endwith %}
 {% endblock %}

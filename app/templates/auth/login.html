@@ -1,42 +1,29 @@
-# Plantilla de inicio de sesión
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="card-title mb-0"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</h4>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="" novalidate>
-                        {{ form.hidden_tag() }}
-                        <div class="mb-3">
-                            {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control", autocomplete="username") }}
-                            {% for error in form.username.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control", autocomplete="current-password") }}
-                            {% for error in form.password.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="mb-3 form-check">
-                            {{ form.remember_me(class="form-check-input") }}
-                            {{ form.remember_me.label(class="form-check-label") }}
-                        </div>
-                        <div class="d-grid">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
+{% with title="Iniciar Sesión", icon="sign-in-alt" %}
+    {% include "components/_auth_card.html" %}
+        {% block card_body %}
+        <form method="POST" action="" novalidate>
+            {{ form.hidden_tag() }}
+            
+            {% with field=form.username, autocomplete="username" %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+            
+            {% with field=form.password, autocomplete="current-password" %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+            
+            <div class="mb-3 form-check">
+                {{ form.remember_me(class="form-check-input") }}
+                {{ form.remember_me.label(class="form-check-label") }}
             </div>
-        </div>
-    </div>
-</div>
+            
+            {% with label="Iniciar Sesión", icon="sign-in-alt" %}
+                {% include "components/_submit_button.html" %}
+            {% endwith %}
+        </form>
+        {% endblock %}
+{% endwith %}
 {% endblock %}

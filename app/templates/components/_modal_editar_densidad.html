@@ -1,0 +1,29 @@
+<div class="modal fade" id="editarDensidadModal" tabindex="-1" aria-labelledby="editarDensidadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="editarDensidadModalLabel">Editar Densidad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('admin.editar_densidad') }}" method="POST">
+                {{ form.csrf_token }}
+                <div class="modal-body">
+                    <input type="hidden" id="editar_densidad_id" name="densidad_id">
+                    <div class="mb-3">
+                        <label for="editar_densidad_nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="editar_densidad_nombre" name="densidad" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editar_densidad_valor" class="form-label">Valor (plantas/m²)</label>
+                        <input type="number" class="form-control" id="editar_densidad_valor" name="valor" step="0.1" min="0.1" required>
+                        <div class="form-text">Número de plantas por metro cuadrado</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 
+{% macro generate_page_url(page) %}
+    {{ url_for('cortes.index', page=page) }}
+{% endmacro %}
+
 {% block content %}
 <div class="container">
     <h1 class="mb-4">Cortes</h1>
@@ -16,96 +20,35 @@
         </div>
         <div class="card-body">
             {% if cortes.items %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaCortes">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Siembra</th>
-                            <th>Ubicación</th>
-                            <th>Variedad</th>
-                            <th>Número</th>
-                            <th>Fecha</th>
-                            <th>Cantidad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for corte in cortes.items %}
-                        <tr>
-                            <td>{{ corte.corte_id }}</td>
-                            <td>{{ corte.siembra.siembra_id }}</td>
-                            <td>{{ corte.siembra.bloque_cama.ubicacion_completa }}</td>
-                            <td>{{ corte.siembra.variedad.variedad }}</td>
-                            <td>{{ corte.num_corte }}</td>
-                            <td>{{ corte.fecha_corte|dateformat }}</td>
-                            <td>{{ corte.cantidad_tallos }}</td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{{ url_for('siembras.detalles', id=corte.siembra_id) }}" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="Ver Siembra">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    {% if corte.siembra.estado == 'Activa' %}
-                                    <a href="{{ url_for('cortes.editar', id=corte.corte_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{{ url_for('cortes.eliminar', id=corte.corte_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <nav aria-label="Paginación">
-                <ul class="pagination justify-content-center">
-                    {% if cortes.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('cortes.index', page=cortes.prev_num) }}">Anterior</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">Anterior</span>
-                    </li>
-                    {% endif %}
-                    
-                    {% for page_num in cortes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
-                        {% if page_num %}
-                            {% if page_num == cortes.page %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ page_num }}</span>
-                            </li>
-                            {% else %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('cortes.index', page=page_num) }}">{{ page_num }}</a>
-                            </li>
-                            {% endif %}
-                        {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if cortes.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('cortes.index', page=cortes.next_num) }}">Siguiente</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">Siguiente</span>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
+                {% with table_id='tablaCortes',
+                        columns=[
+                            {'label': 'ID', 'field': 'corte_id'},
+                            {'label': 'Siembra', 'field': 'siembra.siembra_id'},
+                            {'label': 'Ubicación', 'field': 'siembra.bloque_cama.ubicacion_completa'},
+                            {'label': 'Variedad', 'field': 'siembra.variedad.variedad'},
+                            {'label': 'Número', 'field': 'num_corte'},
+                            {'label': 'Fecha', 'field': 'fecha_corte', 'template': 'components/_fecha_format.html'},
+                            {'label': 'Cantidad', 'field': 'cantidad_tallos'},
+                            {'label': 'Acciones', 'template': 'components/_corte_actions.html'}
+                        ],
+                        items=cortes.items,
+                        pagination={
+                            'has_prev': cortes.has_prev,
+                            'has_next': cortes.has_next,
+                            'prev_url': url_for('cortes.index', page=cortes.prev_num),
+                            'next_url': url_for('cortes.index', page=cortes.next_num),
+                            'iter_pages': cortes.iter_pages,
+                            'page': cortes.page,
+                            'total': cortes.total,
+                            'url_macro': generate_page_url
+                        }
+                %}
+                    {% include "components/_data_table.html" %}
+                {% endwith %}
             {% else %}
-            <div class="alert alert-info">
-                No hay cortes registrados.
-            </div>
+                <div class="alert alert-info">
+                    No hay cortes registrados.
+                </div>
             {% endif %}
         </div>
     </div>

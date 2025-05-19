@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Resumen de Pérdidas</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('perdidas.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <!-- Resumen global por causa -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Pérdidas por Causa</h5>
+        </div>
+        <div class="card-body">
+            {% if resumen_global %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Causa</th>
+                            <th>Total</th>
+                            <th>Porcentaje</th>
+                            <th>Visualización</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set total_global = resumen_global|map(attribute='total')|sum %}
+                        {% for causa in resumen_global %}
+                        <tr>
+                            <td>{{ causa.nombre }}</td>
+                            <td>{{ causa.total }}</td>
+                            <td>{{ (causa.total / total_global * 100)|round(1) if total_global > 0 else 0 }}%</td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar bg-danger" role="progressbar" 
+                                         style="width: {{ (causa.total / total_global * 100)|round(1) if total_global > 0 else 0 }}%;" 
+                                         aria-valuenow="{{ (causa.total / total_global * 100)|round(1) if total_global > 0 else 0 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ (causa.total / total_global * 100)|round(1) if total_global > 0 else 0 }}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-dark">
+                            <th>Total</th>
+                            <th>{{ total_global }}</th>
+                            <th>100%</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay datos de pérdidas registrados.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Resumen por variedad -->
+    <div class="card shadow">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Pérdidas por Variedad</h5>
+        </div>
+        <div class="card-body">
+            {% if perdidas_variedad %}
+            <div class="accordion" id="acordionVariedades">
+                {% for variedad, causas in perdidas_variedad.items() %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading{{ loop.index }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                            <strong>{{ variedad }}</strong>
+                            <span class="badge bg-info ms-2">{{ causas|map(attribute='1')|sum }} pérdidas</span>
+                        </button>
+                    </h2>
+                    <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" aria-labelledby="heading{{ loop.index }}" data-bs-parent="#acordionVariedades">
+                        <div class="accordion-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Causa</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for causa, total in causas %}
+                                        <tr>
+                                            <td>{{ causa }}</td>
+                                            <td>{{ total }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="table-secondary">
+                                            <th>Total</th>
+                                            <th>{{ causas|map(attribute='1')|sum }}</th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay datos de pérdidas por variedad.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

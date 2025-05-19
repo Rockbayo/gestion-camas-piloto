@@ -1,0 +1,43 @@
+<div class="btn-group">
+    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" 
+            data-bs-target="#detalleModal{{ item.variedad_id }}">
+        <i class="fas fa-eye"></i>
+    </button>
+    <a href="{{ url_for('reportes.curva_produccion', variedad_id=item.variedad_id) }}" 
+       class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Ver Curva de Producción">
+        <i class="fas fa-chart-line"></i>
+    </a>
+</div>
+
+<!-- Modal de Detalles -->
+<div class="modal fade" id="detalleModal{{ item.variedad_id }}" tabindex="-1" 
+     aria-labelledby="detalleModalLabel{{ item.variedad_id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detalleModalLabel{{ item.variedad_id }}">Detalles de Variedad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>Información de Variedad</h6>
+                    <p><strong>ID:</strong> {{ item.variedad_id }}</p>
+                    <p><strong>Nombre:</strong> {{ item.variedad }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Información de Flor</h6>
+                    <p><strong>Nombre:</strong> {{ item.flor_color.flor.flor }}</p>
+                    <p><strong>Abreviatura:</strong> {{ item.flor_color.flor.flor_abrev }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Información de Color</h6>
+                    <p><strong>Nombre:</strong> {{ item.flor_color.color.color }}</p>
+                    <p><strong>Abreviatura:</strong> {{ item.flor_color.color.color_abrev }}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,35 @@
+<!-- app/templates/components/_corte_form.html -->
+<form method="POST" action="">
+    {{ form.hidden_tag() }}
+    {{ form.siembra_id }}
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            {% with field=form.num_corte %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+        </div>
+        <div class="col-md-6">
+            {% with field=form.fecha_corte, type="date" %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+        </div>
+    </div>
+    
+    {% with field=form.cantidad_tallos %}
+        {% include "components/_form_field.html" %}
+    {% endwith %}
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
+        {% if corte is defined %}
+            {% with label="Actualizar Corte", icon="save" %}
+                {% include "components/_submit_button.html" %}
+            {% endwith %}
+        {% else %}
+            {% with label="Registrar Corte", icon="plus" %}
+                {% include "components/_submit_button.html" %}
+            {% endwith %}
+        {% endif %}
+    </div>
+</form>

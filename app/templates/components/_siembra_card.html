@@ -1,0 +1,47 @@
+<!-- app/templates/components/_siembra_card.html -->
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">Detalles de Siembra</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>ID:</strong> {{ siembra.siembra_id }}</p>
+                <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
+                <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat('%d-%m-%Y') }}</p>
+                <p><strong>Fecha Inicio de Corte:</strong> {{ siembra.fecha_inicio_corte|dateformat('%d-%m-%Y') }}</p>
+                <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
+            </div>
+        </div>
+        
+        <!-- Información de disponibilidad -->
+        <div class="alert {% if tallos_disponibles <= 0 %}alert-danger{% elif tallos_disponibles < total_plantas_sembradas * 0.1 %}alert-warning{% else %}alert-info{% endif %} mt-3">
+            <p class="mb-0"><strong>Total de plantas sembradas:</strong> {{ total_plantas_sembradas }}</p>
+            {% if total_tallos_actuales is defined %}
+                <p class="mb-0"><strong>Total de tallos ya cortados:</strong> {{ total_tallos_actuales }}</p>
+            {% endif %}
+            {% if total_tallos_otros_cortes is defined %}
+                <p class="mb-0"><strong>Total de tallos ya cortados (sin este corte):</strong> {{ total_tallos_otros_cortes }}</p>
+            {% endif %}
+            {% if corte is defined %}
+                <p class="mb-0"><strong>Cantidad actual de este corte:</strong> {{ corte.cantidad_tallos }}</p>
+            {% endif %}
+            <p class="mb-0"><strong>Tallos disponibles para {% if corte is defined %}asignar a este corte{% else %}cortar{% endif %}:</strong> 
+                <span class="fw-bold">
+                    {% if tallos_disponibles is defined %}
+                        {% if corte is defined %}
+                            {{ tallos_disponibles + corte.cantidad_tallos }}
+                        {% else %}
+                            {{ tallos_disponibles }}
+                        {% endif %}
+                    {% else %}
+                        No disponible
+                    {% endif %}
+                </span>
+            </p>
+        </div>
+    </div>
+</div>

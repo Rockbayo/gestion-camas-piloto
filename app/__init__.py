@@ -102,6 +102,9 @@ def create_app(config_class=Config):
     
     from app.reportes import reportes as reportes_bp
     app.register_blueprint(reportes_bp)
+
+    from app.perdidas import bp as perdidas_bp
+    app.register_blueprint(perdidas_bp)
     
     # Añadir filtros personalizados para fechas
     from app.utils.optimizado import add_date_filter
