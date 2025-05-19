@@ -454,6 +454,23 @@ def dashboard():
                           grafico_aprovechamiento_flor=grafico_aprovechamiento_flor,
                           variedades=variedades_list)
 
+class Perdida(db.Model):
+    __tablename__ = 'perdidas'
+    perdida_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
+    fecha_perdida = db.Column(db.Date, nullable=False)
+    cantidad = db.Column(db.Integer, nullable=False)
+    motivo = db.Column(db.String(255))
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
+    fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relaciones
+    siembra = db.relationship('Siembra', backref='perdidas')
+    usuario = db.relationship('Usuario', backref='perdidas_registradas')
+    
+    def __repr__(self):
+        return f'<Perdida {self.perdida_id}>'
+
 # Endpoint para limpiar base de datos
 @bp.route('/limpiar-db', methods=['POST'])
 @login_required
@@ -464,16 +481,19 @@ def limpiar_db():
         return redirect(url_for('main.dashboard'))
     
     try:
-        # Primero eliminar los cortes (tienen dependencias)
+        # Primero eliminar los registros de la tabla perdidas
+        db.session.query(Perdida).delete()
+        
+        # Luego eliminar los cortes (tienen dependencias)
         db.session.query(Corte).delete()
         
-        # Luego eliminar las siembras
+        # Finalmente eliminar las siembras
         db.session.query(Siembra).delete()
         
         # Confirmar cambios
         db.session.commit()
         
-        flash('Base de datos limpiada correctamente. Se han eliminado todos los cortes y siembras.', 'success')
+        flash('Base de datos limpiada correctamente. Se han eliminado todos los cortes, pérdidas y siembras.', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al limpiar la base de datos: {str(e)}', 'danger')
