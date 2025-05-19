@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Registro de Pérdidas</h1>
+    
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
+        </a>
+        <div>
+            <a href="{{ url_for('perdidas.causas') }}" class="btn btn-info me-2">
+                <i class="fas fa-cog"></i> Gestionar Causas
+            </a>
+            <a href="{{ url_for('perdidas.resumen') }}" class="btn btn-primary">
+                <i class="fas fa-chart-pie"></i> Ver Resumen
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Filtros</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('perdidas.index') }}">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label for="causa_id" class="form-label">Causa de Pérdida</label>
+                        <select id="causa_id" name="causa_id" class="form-select">
+                            <option value="">Todas las causas</option>
+                            {% for causa in causas %}
+                            <option value="{{ causa.causa_id }}" {% if causa_id == causa.causa_id %}selected{% endif %}>
+                                {{ causa.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label for="fecha_desde" class="form-label">Fecha Desde</label>
+                        <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" 
+                               value="{{ fecha_desde }}">
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
+                        <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control"
+                               value="{{ fecha_hasta }}">
+                    </div>
+                    
+                    <div class="col-md-3 mb-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Listado de Pérdidas -->
+    <div class="card shadow">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Listado de Pérdidas Registradas</h5>
+        </div>
+        <div class="card-body">
+            {% if perdidas.items %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="tablaPerdidas">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Siembra</th>
+                            <th>Variedad</th>
+                            <th>Causa</th>
+                            <th>Cantidad</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for perdida in perdidas.items %}
+                        <tr>
+                            <td>{{ perdida.perdida_id }}</td>
+                            <td>
+                                <a href="{{ url_for('siembras.detalles', id=perdida.siembra_id) }}">
+                                    {{ perdida.siembra.bloque_cama.ubicacion_completa }}
+                                </a>
+                            </td>
+                            <td>{{ perdida.siembra.variedad.variedad }}</td>
+                            <td>{{ perdida.causa.nombre }}</td>
+                            <td>{{ perdida.cantidad }}</td>
+                            <td>{{ perdida.fecha_perdida|dateformat }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('perdidas.editar', id=perdida.perdida_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('perdidas.eliminar', id=perdida.perdida_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            <nav aria-label="Paginación" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if perdidas.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('perdidas.index', page=perdidas.prev_num, causa_id=causa_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            <i class="fas fa-chevron-left"></i> Anterior
+                        </span>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in perdidas.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == perdidas.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('perdidas.index', page=page_num, causa_id=causa_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if perdidas.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('perdidas.index', page=perdidas.next_num, causa_id=causa_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">
+                            Siguiente <i class="fas fa-chevron-right"></i>
+                        </span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay pérdidas registradas que coincidan con los filtros aplicados.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Inicializar tabla de datos si no hay paginación del servidor
+        if ($('#tablaPerdidas').length > 0 && {{ perdidas.total }} <= {{ perdidas.per_page }}) {
+            $('#tablaPerdidas').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+                },
+                order: [[5, 'desc']], // Ordenar por fecha (sexta columna)
+                paging: false,
+                info: false
+            });
+        }
+    });
+</script>
+{% endblock %}

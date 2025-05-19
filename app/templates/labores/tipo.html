@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Tipos de Labores Culturales</h1>
+    
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{{ url_for('labores.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Labores
+        </a>
+        <div>
+            <a href="{{ url_for('labores.crear_tipo') }}" class="btn btn-success">
+                <i class="fas fa-plus-circle"></i> Nuevo Tipo de Labor
+            </a>
+        </div>
+    </div>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Tipos de Labores Configurados</h5>
+        </div>
+        <div class="card-body">
+            {% if tipos %}
+            <div class="table-responsive">
+                <table class="table table-striped" id="tablaTipos">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Tipo de Flor</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tipo in tipos %}
+                        <tr>
+                            <td>{{ tipo.tipo_labor_id }}</td>
+                            <td>{{ tipo.nombre }}</td>
+                            <td>{{ tipo.descripcion }}</td>
+                            <td>
+                                {% if tipo.flor %}
+                                    {{ tipo.flor.flor }}
+                                {% else %}
+                                    <span class="badge bg-info">Todas las flores</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('labores.editar_tipo', id=tipo.tipo_labor_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ tipo.tipo_labor_id }}" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Modal de Confirmación para Eliminar -->
+                                <div class="modal fade" id="eliminarModal{{ tipo.tipo_labor_id }}" tabindex="-1" aria-labelledby="eliminarModalLabel{{ tipo.tipo_labor_id }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title" id="eliminarModalLabel{{ tipo.tipo_labor_id }}">Confirmar Eliminación</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>¿Está seguro que desea eliminar el tipo de labor <strong>{{ tipo.nombre }}</strong>?</p>
+                                                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Esta acción no se puede deshacer.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <form action="{{ url_for('labores.eliminar_tipo', id=tipo.tipo_labor_id) }}" method="POST">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay tipos de labores culturales configurados. Cree uno nuevo para comenzar.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">Información</h5>
+        </div>
+        <div class="card-body">
+            <p>Los tipos de labores culturales permiten categorizar y registrar las diferentes actividades realizadas durante el ciclo productivo de las flores.</p>
+            <p>Puede configurar tipos de labor específicos para cada tipo de flor o tipos generales aplicables a todas las variedades.</p>
+            <ul>
+                <li><strong>Desbotone:</strong> Eliminación de botones florales secundarios para favorecer el desarrollo del botón principal.</li>
+                <li><strong>Podas:</strong> Cortes selectivos para controlar el crecimiento vegetativo.</li>
+                <li><strong>Fertilización:</strong> Aplicación de nutrientes específicos en momentos clave del ciclo.</li>
+                <li><strong>Control Fitosanitario:</strong> Aplicación de productos para prevenir o controlar enfermedades.</li>
+                <li><strong>Cortes de Limpieza:</strong> Eliminación de tallos defectuosos o no comerciales.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Inicializar DataTables
+        $('#tablaTipos').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+            },
+            order: [[1, 'asc']], // Ordenar por nombre (segunda columna)
+            pageLength: 10
+        });
+    });
+</script>
+{% endblock %}

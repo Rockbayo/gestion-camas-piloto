@@ -472,3 +472,75 @@ class VistaProduccionPorDia(db.Model):
     flor = db.Column(db.String(10))
     color = db.Column(db.String(20))
     promedio_tallos = db.Column(db.Float)
+
+
+class TipoLabor(db.Model):
+    """Modelo para tipos de labores culturales configurables"""
+    __tablename__ = 'tipos_labor'
+    tipo_labor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre = db.Column(db.String(50), nullable=False, unique=True)
+    descripcion = db.Column(db.String(255))
+    flor_id = db.Column(db.Integer, db.ForeignKey('flores.flor_id'))
+    
+    # Relaciones
+    flor = db.relationship('Flor', backref='tipos_labor')
+    
+    def __repr__(self):
+        return f'<TipoLabor {self.nombre}>'
+
+class LaborCultural(db.Model):
+    """Modelo para registrar labores culturales realizadas"""
+    __tablename__ = 'labores_culturales'
+    labor_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
+    tipo_labor_id = db.Column(db.Integer, db.ForeignKey('tipos_labor.tipo_labor_id'), nullable=False)
+    fecha_labor = db.Column(db.Date, nullable=False)
+    observaciones = db.Column(db.Text)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
+    fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relaciones
+    siembra = db.relationship('Siembra', backref='labores_culturales')
+    tipo_labor = db.relationship('TipoLabor', backref='labores_realizadas')
+    usuario = db.relationship('Usuario', backref='labores_registradas')
+    
+    def __repr__(self):
+        return f'<LaborCultural {self.tipo_labor.nombre} - {self.fecha_labor}>'
+    
+    @property
+    def dias_hasta_inicio_corte(self):
+        """Calcula días entre la labor y el inicio de corte"""
+        if not self.siembra.fecha_inicio_corte:
+            return None
+        return (self.siembra.fecha_inicio_corte - self.fecha_labor).days
+
+class CausaPerdida(db.Model):
+    """Modelo para catalogar las causas de pérdidas"""
+    __tablename__ = 'causas_perdida'
+    causa_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    nombre = db.Column(db.String(50), nullable=False, unique=True)
+    descripcion = db.Column(db.String(255))
+    es_predefinida = db.Column(db.Boolean, default=True)
+    
+    def __repr__(self):
+        return f'<CausaPerdida {self.nombre}>'
+
+class Perdida(db.Model):
+    """Modelo para registrar pérdidas durante el ciclo productivo"""
+    __tablename__ = 'perdidas'
+    perdida_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    siembra_id = db.Column(db.Integer, db.ForeignKey('siembras.siembra_id'), nullable=False)
+    causa_id = db.Column(db.Integer, db.ForeignKey('causas_perdida.causa_id'), nullable=False)
+    cantidad = db.Column(db.Integer, nullable=False)
+    fecha_perdida = db.Column(db.Date, nullable=False)
+    observaciones = db.Column(db.Text)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'), nullable=False)
+    fecha_registro = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relaciones
+    siembra = db.relationship('Siembra', backref='perdidas')
+    causa = db.relationship('CausaPerdida', backref='registros')
+    usuario = db.relationship('Usuario', backref='perdidas_registradas')
+    
+    def __repr__(self):
+        return f'<Perdida {self.causa.nombre}: {self.cantidad}>'

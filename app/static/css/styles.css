@@ -1,10 +1,11 @@
-/* Estilos personalizados para la aplicación */
+/* Estilos personalizados para la aplicación optimizados */
 
 /* Ajustes generales */
 body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    margin: 0;
 }
 
 main {
@@ -20,42 +21,66 @@ main {
 /* Tarjetas y paneles */
 .card {
     margin-bottom: 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: var(--card-radius);
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
-    border-radius: calc(0.5rem - 1px) calc(0.5rem - 1px) 0 0;
+    border-radius: calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px) 0 0;
 }
 
 /* Botones y enlaces */
 .btn {
-    border-radius: 0.3rem;
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
 }
 
 .btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 .btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
+    background-color: var(--success-color);
+    border-color: var(--success-color);
 }
 
 .btn-warning {
-    background-color: #ffc107;
-    border-color: #ffc107;
+    background-color: var(--warning-color);
+    border-color: var(--warning-color);
 }
 
 .btn-danger {
-    background-color: #dc3545;
-    border-color: #dc3545;
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+/* Efectos hover para botones */
+.btn-primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
 }
 
 /* Formularios */
 .form-control, .form-select {
-    border-radius: 0.3rem;
+    border-radius: var(--border-radius);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .form-label {
@@ -68,9 +93,18 @@ main {
     font-weight: 600;
 }
 
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
 /* Paginación */
 .pagination {
     margin-top: 1rem;
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 /* Badges */
@@ -83,12 +117,24 @@ main {
 .footer {
     padding: 1rem 0;
     margin-top: auto;
+    background-color: #f8f9fa;
 }
 
 /* Estilos para dashboard */
 .display-4 {
     font-size: 2.5rem;
     font-weight: 500;
+}
+
+/* Utilidades adicionales */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Responsive */
@@ -99,5 +145,16 @@ main {
     
     .display-4 {
         font-size: 2rem;
+    }
+    
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
     }
 }
