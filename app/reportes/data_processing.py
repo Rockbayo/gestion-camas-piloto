@@ -2,10 +2,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func
 from flask import current_app
 from app.models import Siembra, Corte, Variedad
-from .utils import filtrar_outliers_iqr, calc_plantas_totales, calc_indice_aprovechamiento, get_config_value
-
-# Definir constantes
-MAXIMO_CICLO_ABSOLUTO = get_config_value('MAXIMO_CICLO_ABSOLUTO', 93)
+from .utils import filtrar_outliers_iqr, calc_plantas_totales, calc_indice_aprovechamiento
 
 def obtener_datos_curva(variedad_id, bloque_id=None, periodo_filtro='completo', 
                        periodo_inicio=None, periodo_fin=None, ultimo_ciclo=False):
