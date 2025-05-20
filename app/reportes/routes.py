@@ -177,29 +177,6 @@ def curva_produccion(variedad_id):
                          grafico_curva=grafico_curva,
                          datos_adicionales=datos_adicionales)
 
-@reportes.route('/curva_produccion_interactiva')
-@login_required
-def curva_produccion_interactiva():
-    """Vista interactiva de curvas de producción"""
-    # Obtener parámetros de filtro
-    filters = {
-        'variedad_id': request.args.get('variedad_id', type=int),
-        'bloque_id': request.args.get('bloque_id', type=int),
-        'periodo': request.args.get('periodo', 'completo'),
-        'periodo_inicio': request.args.get('periodo_inicio'),
-        'periodo_fin': request.args.get('periodo_fin')
-    }
-    
-    # Obtener listas para los filtros
-    variedades = Variedad.query.order_by(Variedad.variedad).all()
-    bloques = Bloque.query.order_by(Bloque.bloque).all()
-    
-    return render_template('reportes/curva_produccion_interactiva.html', 
-                          title='Curvas de Producción Interactivas',
-                          variedades=variedades,
-                          bloques=bloques,
-                          **filters)
-
 @reportes.route('/dias_produccion')
 @login_required
 def dias_produccion():
