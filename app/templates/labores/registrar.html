@@ -10,75 +10,18 @@
         </a>
     </div>
     
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Detalles de Siembra</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>ID:</strong> {{ siembra.siembra_id }}</p>
-                    <p><strong>Ubicación:</strong> {{ siembra.bloque_cama.ubicacion_completa }}</p>
-                    <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat('%d-%m-%Y') }}</p>
-                    <p><strong>Fecha Inicio de Corte:</strong>
-                        {% if siembra.fecha_inicio_corte %}
-                            {{ siembra.fecha_inicio_corte|dateformat('%d-%m-%Y') }}
-                        {% else %}
-                            <span class="badge bg-warning text-dark">No establecida</span>
-                        {% endif %}
-                    </p>
-                    <p><strong>Estado:</strong> <span class="badge {% if siembra.estado == 'Activa' %}bg-success{% else %}bg-danger{% endif %}">{{ siembra.estado }}</span></p>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include "components/_siembra_card.html" %}
     
     <div class="card mt-4 shadow">
         <div class="card-header bg-success text-white">
             <h5 class="card-title mb-0">Formulario de Registro de Labor Cultural</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="">
-                {{ form.hidden_tag() }}
-                {{ form.siembra_id }}
-                
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.tipo_labor_id.label(class="form-label") }}
-                            {{ form.tipo_labor_id(class="form-select") }}
-                            {% for error in form.tipo_labor_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.fecha_labor.label(class="form-label") }}
-                            {{ form.fecha_labor(class="form-control", type="date") }}
-                            {% for error in form.fecha_labor.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group mb-3">
-                    {{ form.observaciones.label(class="form-label") }}
-                    {{ form.observaciones(class="form-control", rows=3) }}
-                    {% for error in form.observaciones.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
-                    {{ form.submit(class="btn btn-primary") }}
-                </div>
-            </form>
+            {% with form_action=url_for('labores.registrar', siembra_id=siembra.siembra_id),
+                    cancel_url=url_for('siembras.detalles', id=siembra.siembra_id),
+                    submit_label='Registrar' %}
+                {% include "components/_labor_form.html" %}
+            {% endwith %}
         </div>
     </div>
 </div>

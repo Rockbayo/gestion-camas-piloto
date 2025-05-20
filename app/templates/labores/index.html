@@ -16,46 +16,17 @@
     </div>
     
     <!-- Filtros -->
-    <div class="card shadow mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Filtros</h5>
-        </div>
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('labores.index') }}">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="flor_id" class="form-label">Tipo de Flor</label>
-                        <select id="flor_id" name="flor_id" class="form-select">
-                            <option value="">Todas las flores</option>
-                            {% for flor in flores %}
-                            <option value="{{ flor.flor_id }}" {% if flor_id == flor.flor_id %}selected{% endif %}>
-                                {{ flor.flor }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <label for="fecha_desde" class="form-label">Fecha Desde</label>
-                        <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" 
-                               value="{{ fecha_desde }}">
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
-                        <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control"
-                               value="{{ fecha_hasta }}">
-                    </div>
-                    
-                    <div class="col-md-3 mb-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search"></i> Filtrar
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+    {% with filters=[
+        {'name': 'flor_id', 'label': 'Tipo de Flor', 'type': 'select', 
+         'options': [{'value': f.flor_id, 'text': f.flor} for f in flores],
+         'default_option': 'Todas las flores', 'current_value': flor_id},
+        {'name': 'fecha_desde', 'label': 'Fecha Desde', 'type': 'date',
+         'current_value': fecha_desde},
+        {'name': 'fecha_hasta', 'label': 'Fecha Hasta', 'type': 'date',
+         'current_value': fecha_hasta}
+    ], filter_action=url_for('labores.index') %}
+        {% include "components/_filters.html" %}
+    {% endwith %}
     
     <!-- Listado de Labores Culturales -->
     <div class="card shadow">
@@ -64,110 +35,34 @@
         </div>
         <div class="card-body">
             {% if labores.items %}
-            <div class="table-responsive">
-                <table class="table table-striped table-hover" id="tablaLabores">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Siembra</th>
-                            <th>Variedad</th>
-                            <th>Tipo de Labor</th>
-                            <th>Fecha</th>
-                            <th>Días hasta Corte</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for labor in labores.items %}
-                        <tr>
-                            <td>{{ labor.labor_id }}</td>
-                            <td>
-                                <a href="{{ url_for('siembras.detalles', id=labor.siembra_id) }}">
-                                    {{ labor.siembra.bloque_cama.ubicacion_completa }}
-                                </a>
-                            </td>
-                            <td>{{ labor.siembra.variedad.variedad }}</td>
-                            <td>{{ labor.tipo_labor.nombre }}</td>
-                            <td>{{ labor.fecha_labor|dateformat }}</td>
-                            <td>
-                                {% if labor.dias_hasta_inicio_corte is not none %}
-                                    {{ labor.dias_hasta_inicio_corte }} días
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">No disponible</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{{ url_for('labores.editar', id=labor.labor_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <a href="{{ url_for('labores.eliminar', id=labor.labor_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Paginación -->
-            <nav aria-label="Paginación" class="mt-3">
-                <ul class="pagination justify-content-center">
-                    {% if labores.has_prev %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('labores.index', page=labores.prev_num, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
-                            <i class="fas fa-chevron-left"></i> Anterior
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">
-                            <i class="fas fa-chevron-left"></i> Anterior
-                        </span>
-                    </li>
-                    {% endif %}
-                    
-                    {% for page_num in labores.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-                        {% if page_num %}
-                            {% if page_num == labores.page %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ page_num }}</span>
-                            </li>
-                            {% else %}
-                            <li class="page-item">
-                                <a class="page-link" href="{{ url_for('labores.index', page=page_num, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
-                                    {{ page_num }}
-                                </a>
-                            </li>
-                            {% endif %}
-                        {% else %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                        {% endif %}
-                    {% endfor %}
-                    
-                    {% if labores.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('labores.index', page=labores.next_num, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}">
-                            Siguiente <i class="fas fa-chevron-right"></i>
-                        </a>
-                    </li>
-                    {% else %}
-                    <li class="page-item disabled">
-                        <span class="page-link">
-                            Siguiente <i class="fas fa-chevron-right"></i>
-                        </span>
-                    </li>
-                    {% endif %}
-                </ul>
-            </nav>
+                {% with table_id='tablaLabores',
+                        columns=[
+                            {'label': 'ID', 'field': 'labor_id'},
+                            {'label': 'Siembra', 'template': 'components/_siembra_link.html'},
+                            {'label': 'Variedad', 'field': 'siembra.variedad.variedad'},
+                            {'label': 'Tipo de Labor', 'field': 'tipo_labor.nombre'},
+                            {'label': 'Fecha', 'field': 'fecha_labor', 'template': 'components/_fecha_format.html'},
+                            {'label': 'Días hasta Corte', 'template': 'components/_dias_corte.html'},
+                            {'label': 'Acciones', 'template': 'components/_labor_actions.html'}
+                        ],
+                        items=labores.items,
+                        pagination={
+                            'has_prev': labores.has_prev,
+                            'has_next': labores.has_next,
+                            'prev_url': url_for('labores.index', page=labores.prev_num, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta),
+                            'next_url': url_for('labores.index', page=labores.next_num, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta),
+                            'iter_pages': labores.iter_pages,
+                            'page': labores.page,
+                            'total': labores.total,
+                            'url_for': lambda page: url_for('labores.index', page=page, flor_id=flor_id, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta)
+                        }
+                %}
+                    {% include "components/_data_table.html" %}
+                {% endwith %}
             {% else %}
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> No hay labores culturales registradas que coincidan con los filtros aplicados.
-            </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No hay labores culturales registradas que coincidan con los filtros aplicados.
+                </div>
             {% endif %}
         </div>
     </div>

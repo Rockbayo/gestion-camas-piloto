@@ -18,10 +18,10 @@
     <!-- Filtros -->
     {% with filters=[
         {'name': 'flor', 'label': 'Flor', 'type': 'select', 
-         'options': [{'value': f.flor, 'text': f.flor} for f in flores],
+         'options': flores_opciones,
          'default_option': 'Todas las flores', 'current_value': flor_filter},
         {'name': 'color', 'label': 'Color', 'type': 'select',
-         'options': [{'value': c.color, 'text': c.color} for c in colores],
+         'options': colores_opciones,
          'default_option': 'Todos los colores', 'current_value': color_filter},
         {'name': 'variedad', 'label': 'Variedad', 'type': 'input',
          'current_value': variedad_filter, 'placeholder': 'Buscar por variedad...', 'width_class': 'col-md-4'}
@@ -47,12 +47,12 @@
                         pagination={
                             'has_prev': variedades.has_prev,
                             'has_next': variedades.has_next,
-                            'prev_url': url_for('admin.variedades', page=variedades.prev_num, flor=flor_filter, color=color_filter, variedad=variedad_filter),
-                            'next_url': url_for('admin.variedades', page=variedades.next_num, flor=flor_filter, color=color_filter, variedad=variedad_filter),
+                            'prev_url': prev_url,
+                            'next_url': next_url,
                             'iter_pages': variedades.iter_pages,
                             'page': variedades.page,
                             'total': variedades.total,
-                            'url_for': lambda page: url_for('admin.variedades', page=page, flor=flor_filter, color=color_filter, variedad=variedad_filter)
+                            'url_macro': pagina_url
                         }
                 %}
                     {% include "components/_data_table.html" %}

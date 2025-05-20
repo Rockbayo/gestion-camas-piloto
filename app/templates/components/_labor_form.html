@@ -1,0 +1,31 @@
+<!-- app/templates/components/_labor_form.html -->
+<form method="POST" action="{{ form_action }}">
+    {{ form.hidden_tag() }}
+    {% if form.siembra_id is defined %}
+        {{ form.siembra_id }}
+    {% endif %}
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            {% with field=form.tipo_labor_id %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+        </div>
+        <div class="col-md-6">
+            {% with field=form.fecha_labor, type="date" %}
+                {% include "components/_form_field.html" %}
+            {% endwith %}
+        </div>
+    </div>
+    
+    {% with field=form.observaciones, rows=3 %}
+        {% include "components/_form_field.html" %}
+    {% endwith %}
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <a href="{{ cancel_url }}" class="btn btn-secondary me-md-2">Cancelar</a>
+        {% with label=submit_label|default('Guardar'), icon="save" %}
+            {% include "components/_submit_button.html" %}
+        {% endwith %}
+    </div>
+</form>

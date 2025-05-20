@@ -1,0 +1,5 @@
+{% if item.dias_hasta_inicio_corte is not none %}
+    {{ item.dias_hasta_inicio_corte }} días
+{% else %}
+    <span class="badge bg-warning text-dark">No disponible</span>
+{% endif %}

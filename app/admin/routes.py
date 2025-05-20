@@ -177,13 +177,37 @@ def variedades():
     
     query = _get_filtered_query(Variedad, filters, [Variedad.flor_color, FlorColor.flor, FlorColor.color])
     variedades = query.order_by(Variedad.variedad).paginate(page=page, per_page=20)
+
+    flores = Flor.query.order_by(Flor.flor).all()
+    colores = Color.query.order_by(Color.color).all()
+
+    flores_opciones = [{'value': f.flor, 'text': f.flor} for f in flores]
+    colores_opciones = [{'value': c.color, 'text': c.color} for c in colores]
     
-    return render_template('admin/variedades.html', 
+    # Define una función para generar URLs de paginación
+    def pagina_url(p):
+        return url_for('admin.variedades', page=p, flor=filters['flor'], color=filters['color'], variedad=filters['variedad'])
+    
+    # También puedes definir las URLs prev y next directamente
+    prev_url = url_for('admin.variedades', page=variedades.prev_num, flor=filters['flor'], color=filters['color'], variedad=filters['variedad']) if variedades.has_prev else None
+    
+    next_url = url_for('admin.variedades', page=variedades.next_num, flor=filters['flor'], color=filters['color'], variedad=filters['variedad']) if variedades.has_next else None
+    
+    return render_template('admin/variedades.html',
                          title='Gestión de Variedades',
+                         flores=flores,
+                         colores=colores,
                          variedades=variedades,
-                         flores=Flor.query.order_by(Flor.flor).all(),
-                         colores=Color.query.order_by(Color.color).all(),
-                         **filters)
+                         flor_filter=filters['flor'],
+                         color_filter=filters['color'],
+                         variedad_filter=filters['variedad'],
+                         flores_opciones=flores_opciones,
+                         colores_opciones=colores_opciones,
+                         pagina_url=pagina_url,  # Pasar la función de URL
+                         prev_url=prev_url,      # Pasar URLs prev/next directamente
+                         next_url=next_url
+                         )
+
 
 @bp.route('/bloques', methods=['GET'])
 @login_required
@@ -200,13 +224,36 @@ def bloques():
                               [BloqueCamaLado.bloque, BloqueCamaLado.cama, BloqueCamaLado.lado])
     bloques_camas = query.order_by(Bloque.bloque, Cama.cama, Lado.lado).paginate(page=page, per_page=20)
     
+    # Obtener las listas para los filtros
+    bloques_lista = Bloque.query.order_by(Bloque.bloque).all()
+    camas_lista = Cama.query.order_by(Cama.cama).all()
+    lados_lista = Lado.query.order_by(Lado.lado).all()
+    
+    # Preparar opciones para los filtros
+    bloques_opciones = [{'value': b.bloque, 'text': b.bloque} for b in bloques_lista]
+    camas_opciones = [{'value': c.cama, 'text': c.cama} for c in camas_lista]
+    lados_opciones = [{'value': l.lado, 'text': l.lado} for l in lados_lista]
+    
+    # Función para generar URLs de paginación
+    def pagina_url(page):
+        return url_for('admin.bloques', page=page, 
+                     bloque=filters['bloque'], 
+                     cama=filters['cama'], 
+                     lado=filters['lado'])
+    
     return render_template('admin/bloques.html', 
                          title='Gestión de Bloques y Camas',
                          bloques_camas=bloques_camas,
-                         bloques=Bloque.query.order_by(Bloque.bloque).all(),
-                         camas=Cama.query.order_by(Cama.cama).all(),
-                         lados=Lado.query.order_by(Lado.lado).all(),
-                         **filters)
+                         bloques=bloques_lista,
+                         camas=camas_lista,
+                         lados=lados_lista,
+                         bloques_opciones=bloques_opciones,
+                         camas_opciones=camas_opciones,
+                         lados_opciones=lados_opciones,
+                         pagina_url=pagina_url,
+                         bloque=filters['bloque'],
+                         cama=filters['cama'],
+                         lado=filters['lado'])
 
 # Vistas de densidades
 @bp.route('/densidades', methods=['GET'])

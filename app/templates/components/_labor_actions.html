@@ -1,0 +1,8 @@
+<div class="btn-group">
+    <a href="{{ url_for('labores.editar', id=item.labor_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
+        <i class="fas fa-edit"></i>
+    </a>
+    <a href="{{ url_for('labores.eliminar', id=item.labor_id) }}" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este registro?')" data-bs-toggle="tooltip" title="Eliminar">
+        <i class="fas fa-trash"></i>
+    </a>
+</div>

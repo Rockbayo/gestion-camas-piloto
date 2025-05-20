@@ -26,7 +26,7 @@
         </div>
         <div class="collapse show" id="collapseFilters">
             <div class="card-body">
-                <form method="get" action="{{ url_for('reportes.curva_produccion_integrada') }}" id="filtersForm">
+                <form method="get" action="{{ url_for('reportes.curva_produccion_interactiva') }}" id="filtersForm">
                     <div class="row">
                         <!-- Filtro Primario (Nivel de Análisis) -->
                         <div class="col-md-3 mb-3">
@@ -174,7 +174,7 @@
                             <button type="submit" class="btn btn-primary px-5">
                                 <i class="fas fa-search"></i> Generar Curvas
                             </button>
-                            <a href="{{ url_for('reportes.curva_produccion_integrada') }}" class="btn btn-outline-secondary ms-2">
+                            <a href="{{ url_for('reportes.curva_produccion_interactiva') }}" class="btn btn-outline-secondary ms-2">
                                 <i class="fas fa-undo"></i> Limpiar Filtros
                             </a>
                         </div>

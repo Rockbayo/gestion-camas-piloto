@@ -18,14 +18,14 @@
     <!-- Filtros -->
     {% with filters=[
         {'name': 'bloque', 'label': 'Bloque', 'type': 'select', 
-         'options': [{'value': b.bloque, 'text': b.bloque} for b in bloques],
-         'default_option': 'Todos los bloques', 'current_value': bloque_filter},
+        'options': bloques_opciones,
+        'default_option': 'Todos los bloques', 'current_value': bloque_filter},
         {'name': 'cama', 'label': 'Cama', 'type': 'select',
-         'options': [{'value': c.cama, 'text': c.cama} for c in camas],
-         'default_option': 'Todas las camas', 'current_value': cama_filter},
+        'options': camas_opciones,
+        'default_option': 'Todas las camas', 'current_value': cama_filter},
         {'name': 'lado', 'label': 'Lado', 'type': 'select',
-         'options': [{'value': l.lado, 'text': l.lado} for l in lados],
-         'default_option': 'Todos los lados', 'current_value': lado_filter}
+        'options': lados_opciones,
+        'default_option': 'Todos los lados', 'current_value': lado_filter}
     ], filter_action=url_for('admin.bloques') %}
         {% include "components/_filters.html" %}
     {% endwith %}
@@ -54,7 +54,7 @@
                             'iter_pages': bloques_camas.iter_pages,
                             'page': bloques_camas.page,
                             'total': bloques_camas.total,
-                            'url_for': lambda page: url_for('admin.bloques', page=page, bloque=bloque_filter, cama=cama_filter, lado=lado_filter)
+                            'url_macro': pagina_url
                         }
                 %}
                     {% include "components/_data_table.html" %}

@@ -16,7 +16,7 @@
             <h5 class="card-title mb-0">Importar Dataset</h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="{{ url_for('admin.importar_dataset') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ url_for('admin.datasets') }}" enctype="multipart/form-data">
                 {{ form.hidden_tag() }}
                 
                 <div class="row">
