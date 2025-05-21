@@ -10,7 +10,7 @@ from app.models import (
     Variedad, FlorColor, Flor, Color, Bloque, Cama, Lado, BloqueCamaLado,
     Densidad, Siembra
 )
-from app.utils.optimizado import DatasetImporter
+from app.utils import DatasetImporter
 import os
 import json
 import uuid

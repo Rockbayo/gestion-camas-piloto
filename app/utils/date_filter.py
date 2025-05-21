@@ -1,72 +1,62 @@
 """
-Filtro personalizado para manejo de fechas y formatos en plantillas
+Filtros personalizados para manejo de fechas y formatos en plantillas Flask.
 
-Este módulo proporciona un filtro para Flask que permite formatear fechas
-de manera consistente en toda la aplicación, controlando casos de valores nulos.
+Mejoras:
+- Mejor organización del código
+- Manejo más consistente de errores
+- Documentación más clara
 """
+
 from datetime import datetime
 import json
+from markupsafe import Markup
 
-def add_date_filter(app):
+class DateTimeEncoder(json.JSONEncoder):
+    """Encoder personalizado para manejar objetos datetime en JSON."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+def configure_date_filters(app):
     """
-    Configura filtros personalizados para la aplicación Flask.
+    Configura los filtros de fecha personalizados en la aplicación Flask.
     
     Args:
-        app: La aplicación Flask
-    
-    Returns:
-        La aplicación con los filtros configurados
+        app: Instancia de la aplicación Flask
     """
     @app.template_filter('dateformat')
-    def dateformat_filter(date, format='%d-%m-%Y'):
+    def format_date(date, format='%d-%m-%Y', default_html=None):
         """
-        Formatea una fecha o devuelve un texto predeterminado si la fecha es None.
+        Formatea una fecha con HTML opcional para valores nulos.
         
         Args:
             date: Objeto datetime o None
-            format: Formato de fecha deseado
-            
-        Returns:
-            String formateado
+            format: Formato de strftime
+            default_html: HTML para mostrar cuando date es None
         """
         if date is None:
-            return '<span class="badge bg-warning">No disponible</span>'
+            if default_html is None:
+                default_html = '<span class="badge bg-warning">No disponible</span>'
+            return Markup(default_html)
         return date.strftime(format)
     
     @app.template_filter('dateonly')
-    def dateonly_filter(date, format='%d-%m-%Y'):
+    def date_only(date, format='%d-%m-%Y', default_text="No disponible"):
         """
-        Similar a dateformat pero devuelve solo texto sin HTML.
-        
-        Args:
-            date: Objeto datetime o None
-            format: Formato de fecha deseado
-            
-        Returns:
-            String formateado
+        Formatea una fecha sin HTML para valores nulos.
         """
         if date is None:
-            return "No disponible"
+            return default_text
         return date.strftime(format)
     
     @app.template_filter('tojson')
-    def tojson_filter(obj):
+    def to_json(obj, indent=None):
         """
-        Convierte un objeto Python a JSON seguro para usar en JavaScript.
-        Maneja correctamente objetos datetime y None.
+        Convierte un objeto Python a JSON seguro para JavaScript.
         
         Args:
-            obj: Objeto Python a convertir
-            
-        Returns:
-            String JSON
+            obj: Objeto a serializar
+            indent: Indentación del JSON resultante
         """
-        class DateTimeEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, datetime):
-                    return obj.strftime('%Y-%m-%d')
-                return super().default(obj)
-        
-        return json.dumps(obj, cls=DateTimeEncoder, ensure_ascii=False)
-        
-    return app
+        return json.dumps(obj, cls=DateTimeEncoder, ensure_ascii=False, indent=indent)

@@ -1,4 +1,13 @@
-# app/__init__.py
+"""
+Módulo de inicialización principal de la aplicación Flask.
+
+Mejoras:
+- Estructura más clara y organizada
+- Mejor manejo de dependencias
+- Documentación más completa
+- Configuración más modular
+"""
+
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -9,21 +18,78 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
 
-# Importar utilidades para manejo de datos
-from app.utils.data_utils import safe_decimal, safe_int, safe_float, calc_indice_aprovechamiento, calc_plantas_totales, filtrar_outliers_iqr
-
 # Inicialización de extensiones
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
-login_manager.login_view = 'auth.login'
-login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
 csrf = CSRFProtect()
 
-# Quitar la línea problemática: login = login_manager
+# Configuración del LoginManager
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
+login_manager.login_message_category = 'info'
 
-# Definir funciones auxiliares antes de create_app
+def create_app(config_class=Config):
+    """
+    Factory function para crear la aplicación Flask.
+    
+    Args:
+        config_class: Clase de configuración a usar
+        
+    Returns:
+        Instancia de la aplicación Flask configurada
+    """
+    app = Flask(__name__)
+    app.config.from_object(config_class)
+    
+    # Inicializar extensiones
+    initialize_extensions(app)
+    
+    # Registrar blueprints
+    register_blueprints(app)
+    
+    # Configurar manejo de errores
+    register_error_handlers(app)
+    
+    # Registrar comandos CLI
+    register_cli_commands(app)
+    
+    # Configurar logging
+    configure_logging(app)
+    
+    return app
+
+def initialize_extensions(app):
+    """Inicializa todas las extensiones Flask."""
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login_manager.init_app(app)
+    csrf.init_app(app)
+    
+    # Importar y configurar filtros personalizados
+    from app.utils.date_filter import configure_date_filters
+    configure_date_filters(app)
+
+def register_blueprints(app):
+    """Registra todos los blueprints de la aplicación."""
+    from app.main import bp as main_bp
+    from app.auth import bp as auth_bp
+    from app.admin import bp as admin_bp
+    from app.siembras import bp as siembras_bp
+    from app.cortes import bp as cortes_bp
+    from app.reportes import reportes as reportes_bp
+    from app.perdidas import bp as perdidas_bp
+    
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(siembras_bp, url_prefix='/siembras')
+    app.register_blueprint(cortes_bp, url_prefix='/cortes')
+    app.register_blueprint(reportes_bp)
+    app.register_blueprint(perdidas_bp)
+
 def register_error_handlers(app):
+    """Registra manejadores de errores personalizados."""
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template('errors/404.html'), 404
@@ -33,6 +99,7 @@ def register_error_handlers(app):
         return render_template('errors/500.html'), 500
 
 def register_cli_commands(app):
+    """Registra comandos personalizados para la CLI de Flask."""
     @app.cli.command("init-db")
     def init_db():
         """Inicializa la base de datos con datos básicos."""
@@ -55,77 +122,50 @@ def register_cli_commands(app):
             admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
-            print("Base de datos inicializada con usuario admin")
+            app.logger.info("Base de datos inicializada con usuario admin")
         else:
-            print("Ya existen usuarios en la base de datos")
+            app.logger.info("Ya existen usuarios en la base de datos")
     
     @app.cli.command("importar-historico")
     def importar_historico_cmd():
         """Importa datos históricos desde un archivo Excel."""
-        import os
-        from app.utils.optimizado import importar_historico
+        from app.utils.importar_historico import importar_historico
+        import click
         
-        archivo = input("Ruta del archivo Excel: ")
-        if not os.path.exists(archivo):
-            print(f"El archivo {archivo} no existe.")
-            return
+        archivo = click.prompt("Ruta del archivo Excel", type=click.Path(exists=True))
+        click.echo(f"Importando datos desde {archivo}...")
         
-        print(f"Importando datos desde {archivo}...")
-        importar_historico(archivo)
-            
-    
-def create_app(config_class=Config):
-    app = Flask(__name__)
-    app.config.from_object(config_class)
-    
-    # Inicializar extensiones
-    db.init_app(app)
-    migrate.init_app(app, db)
-    login_manager.init_app(app)
-    csrf.init_app(app)
-    
-    # Registrar blueprints - las rutas se importan automáticamente en __init__.py
-    from app.main import bp as main_bp
-    app.register_blueprint(main_bp)
-    
-    from app.auth import bp as auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    
-    from app.admin import bp as admin_bp
-    app.register_blueprint(admin_bp, url_prefix='/admin')
-    
-    from app.siembras import bp as siembras_bp
-    app.register_blueprint(siembras_bp, url_prefix='/siembras')
-    
-    from app.cortes import bp as cortes_bp
-    app.register_blueprint(cortes_bp, url_prefix='/cortes')
-    
-    from app.reportes import reportes as reportes_bp
-    app.register_blueprint(reportes_bp)
+        result = importar_historico(archivo)
+        if 'error' in result:
+            click.echo(f"Error: {result['error']}", err=True)
+        else:
+            click.echo("Importación completada con éxito:")
+            click.echo(f"Siembras creadas: {result.get('siembras_creadas', 0)}")
+            click.echo(f"Cortes creados: {result.get('cortes_creados', 0)}")
 
-    from app.perdidas import bp as perdidas_bp
-    app.register_blueprint(perdidas_bp)
-    
-    # Añadir filtros personalizados para fechas
-    from app.utils.optimizado import add_date_filter
-    add_date_filter(app)
-    
-    # Manejar errores
-    register_error_handlers(app)
-    
-    # Configurar comandos CLI
-    register_cli_commands(app)
-    
-    # Configurar logging...
+def configure_logging(app):
+    """Configura el sistema de logging de la aplicación."""
     if not app.debug and not app.testing:
         if not os.path.exists('logs'):
             os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/cpc.log', maxBytes=10240, backupCount=10)
+            
+        file_handler = RotatingFileHandler(
+            'logs/cpc.log',
+            maxBytes=10240,
+            backupCount=10
+        )
         file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
         app.logger.setLevel(logging.INFO)
         app.logger.info('CPC startup')
-    
-    return app
+
+# Importar modelos para que Flask-Migrate los detecte
+from app.models import (
+    Documento, Rol, Permiso, Usuario, Bloque, Cama, Lado, BloqueCamaLado,
+    Flor, Color, FlorColor, Variedad, Area, Densidad, Siembra, Corte,
+    TipoLabor, LaborCultural, CausaPerdida, Perdida,
+    VistaProduccionAcumulada, VistaProduccionPorDia
+)

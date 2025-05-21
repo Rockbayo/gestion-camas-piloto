@@ -124,6 +124,126 @@ def produccion_por_bloque():
                          data=data, 
                          grafico=grafico)
 
+@reportes.route('/dias_produccion')
+@login_required
+def dias_produccion():
+    """
+    Genera un reporte que muestra los días de producción para diferentes variedades,
+    incluyendo días promedio entre cortes, mínimos, máximos y visualización.
+    """
+    # Obtener variedades con suficientes datos para el análisis
+    variedades_con_datos = db.session.query(Variedad)\
+        .join(Siembra)\
+        .join(Corte)\
+        .group_by(Variedad.variedad_id)\
+        .having(func.count(Corte.corte_id) > 5)\
+        .order_by(Variedad.variedad)\
+        .all()
+    
+    # Preparar estructura de datos para el reporte
+    data = {}
+    graficos = {}
+    
+    # Procesar datos para cada variedad
+    for variedad in variedades_con_datos:
+        # Obtener todas las siembras para esta variedad
+        siembras = Siembra.query.filter_by(variedad_id=variedad.variedad_id).all()
+        
+        # Diccionario para almacenar datos por número de corte
+        cortes_data = {}
+        
+        # Procesar cada siembra
+        for siembra in siembras:
+            if not siembra.cortes:
+                continue
+                
+            # Obtener todos los cortes ordenados por número
+            cortes = sorted(siembra.cortes, key=lambda c: c.num_corte)
+            
+            # Procesar cada corte
+            for i, corte in enumerate(cortes):
+                num_corte = corte.num_corte
+                
+                # Calcular días desde la siembra
+                dias = (corte.fecha_corte - siembra.fecha_siembra).days
+                
+                # Almacenar en estructura cortes_data
+                if num_corte not in cortes_data:
+                    cortes_data[num_corte] = []
+                
+                # Solo considerar valores razonables (entre 30 y 150 días)
+                if 30 <= dias <= 150:
+                    cortes_data[num_corte].append(dias)
+        
+        # Crear datos resumidos para la variedad
+        variedad_data = []
+        for num_corte, dias_list in sorted(cortes_data.items()):
+            # Aplicar filtro IQR para eliminar valores atípicos
+            dias_filtrados = filtrar_outliers_iqr(dias_list)
+            
+            if dias_filtrados:
+                variedad_data.append({
+                    'num_corte': num_corte,
+                    'dias_promedio': round(sum(dias_filtrados) / len(dias_filtrados)),
+                    'dias_minimo': min(dias_filtrados),
+                    'dias_maximo': max(dias_filtrados),
+                    'total_siembras': len(dias_filtrados)
+                })
+        
+        # Solo incluir variedades con al menos 2 cortes con datos
+        if len(variedad_data) >= 2:
+            data[variedad.variedad] = sorted(variedad_data, key=lambda x: x['num_corte'])
+            
+            # Generar gráfico para esta variedad
+            try:
+                import matplotlib.pyplot as plt
+                import numpy as np
+                import base64
+                from io import BytesIO
+                
+                # Crear figura
+                plt.figure(figsize=(8, 5))
+                
+                # Extraer datos para el gráfico
+                cortes_nums = [d['num_corte'] for d in variedad_data]
+                dias_promedio = [d['dias_promedio'] for d in variedad_data]
+                dias_min = [d['dias_minimo'] for d in variedad_data]
+                dias_max = [d['dias_maximo'] for d in variedad_data]
+                
+                # Graficar días promedio
+                plt.plot(cortes_nums, dias_promedio, 'o-', color='blue', linewidth=2, 
+                         label='Días promedio')
+                
+                # Mostrar rango min-max
+                plt.fill_between(cortes_nums, dias_min, dias_max, color='blue', alpha=0.2, 
+                                 label='Rango min-max')
+                
+                # Configurar gráfico
+                plt.title(f'Días de Producción: {variedad.variedad}')
+                plt.xlabel('Número de Corte')
+                plt.ylabel('Días desde siembra')
+                plt.xticks(cortes_nums)
+                plt.grid(True, alpha=0.3)
+                plt.legend()
+                
+                # Guardar gráfico en base64
+                buffer = BytesIO()
+                plt.savefig(buffer, format='png', dpi=80)
+                buffer.seek(0)
+                grafico_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                plt.close()
+                
+                # Guardar gráfico
+                graficos[variedad.variedad] = grafico_base64
+                
+            except Exception as e:
+                print(f"Error al generar gráfico para {variedad.variedad}: {str(e)}")
+    
+    return render_template('reportes/dias_produccion.html',
+                           title='Reporte de Días de Producción',
+                           data=data,
+                           graficos=graficos)
+
 # ================ CURVAS DE PRODUCCIÓN ================
 
 @reportes.route('/curva_produccion/<int:variedad_id>')
@@ -280,3 +400,82 @@ def exportar_datos():
         )
     
     return jsonify({'error': 'Tipo de reporte no válido'})
+
+@reportes.route('/diagnostico_importacion')
+@login_required
+def diagnostico_importacion():
+    """
+    Genera un diagnóstico del estado de los datos importados en el sistema,
+    mostrando estadísticas y posibles problemas con los datos.
+    """
+    # Estadísticas generales
+    stats = {
+        "total_siembras": Siembra.query.count(),
+        "total_cortes": Corte.query.count(),
+        "total_variedades": Variedad.query.count()
+    }
+    
+    # Identificar siembras sin cortes (potencialmente incompletas)
+    siembras_sin_cortes = db.session.query(func.count(Siembra.siembra_id))\
+        .outerjoin(Corte)\
+        .group_by(Siembra.siembra_id)\
+        .having(func.count(Corte.corte_id) == 0)\
+        .count()
+    
+    # Identificar cortes con índices extremadamente altos (posibles errores)
+    cortes_indices_altos = 0
+    for corte in Corte.query.all():
+        siembra = Siembra.query.get(corte.siembra_id)
+        if not siembra or not siembra.area or not siembra.densidad:
+            continue
+        
+        # Calcular plantas totales
+        plantas_totales = siembra.area.area * siembra.densidad.valor
+        if plantas_totales <= 0:
+            continue
+        
+        # Calcular índice
+        indice = (corte.cantidad_tallos / plantas_totales) * 100
+        
+        # Comprobar si el índice es extremadamente alto (sobre 30%)
+        if indice > 30:
+            cortes_indices_altos += 1
+    
+    # Variedades con siembras registradas
+    variedades_con_siembras = db.session.query(Variedad)\
+        .join(Siembra)\
+        .group_by(Variedad.variedad_id)\
+        .count()
+    
+    # Variedades con suficientes datos para curvas de producción
+    variedades_con_curvas = []
+    for variedad in Variedad.query.all():
+        siembras_query = Siembra.query.filter_by(variedad_id=variedad.variedad_id)
+        siembras_count = siembras_query.count()
+        
+        if siembras_count >= 3:  # Mínimo 3 siembras para tener datos significativos
+            cortes_count = db.session.query(func.count(Corte.corte_id))\
+                .join(Siembra)\
+                .filter(Siembra.variedad_id == variedad.variedad_id)\
+                .scalar() or 0
+            
+            if cortes_count >= 10:  # Mínimo 10 cortes en total para tener suficientes datos
+                variedades_con_curvas.append({
+                    'variedad_id': variedad.variedad_id,
+                    'variedad': variedad.variedad,
+                    'flor': variedad.flor_color.flor.flor,
+                    'color': variedad.flor_color.color.color,
+                    'siembras': siembras_count,
+                    'cortes': cortes_count
+                })
+    
+    # Ordenar variedades por número de cortes (más cortes primero)
+    variedades_con_curvas = sorted(variedades_con_curvas, key=lambda x: x['cortes'], reverse=True)
+    
+    return render_template('reportes/diagnostico_importacion.html',
+                        title='Diagnóstico de Importación de Datos',
+                        stats=stats,
+                        siembras_sin_cortes=siembras_sin_cortes,
+                        cortes_indices_altos=cortes_indices_altos,
+                        variedades_con_siembras=variedades_con_siembras,
+                        variedades_con_curvas=variedades_con_curvas)
