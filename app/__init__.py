@@ -103,28 +103,108 @@ def register_cli_commands(app):
     @app.cli.command("init-db")
     def init_db():
         """Inicializa la base de datos con datos básicos."""
-        from app.models import Documento, Usuario
+        from app.models import Documento, Usuario, Rol, Permiso
         
-        if Usuario.query.first() is None:
+        # Transacción única para mejor rendimiento
+        with db.session.begin_nested():
+            # Crear permiso si no existe
+            permiso_importar = Permiso.query.filter_by(codigo='importar_datos').first()
+            if not permiso_importar:
+                permiso_importar = Permiso(
+                    codigo='importar_datos', 
+                    descripcion='Permite importar datos históricos y datasets'
+                )
+                db.session.add(permiso_importar)
+            
+            # Crear rol admin si no existe
+            rol_admin = Rol.query.filter_by(nombre='admin').first()
+            if not rol_admin:
+                rol_admin = Rol(
+                    nombre='admin',
+                    descripcion='Administrador del sistema con acceso completo'
+                )
+                db.session.add(rol_admin)
+                db.session.flush()
+            
+            # Asignar permiso al rol
+            if permiso_importar not in rol_admin.permisos:
+                rol_admin.permisos.append(permiso_importar)
+            
+            # Verificar y crear documento si es necesario
             doc = Documento.query.get(1)
             if not doc:
                 doc = Documento(doc_id=1, documento='Cedula de Ciudadania')
                 db.session.add(doc)
             
-            admin = Usuario(
-                nombre_1='Admin',
-                apellido_1='Sistema',
-                cargo='Administrador',
-                num_doc=999999,
-                documento_id=1,
-                username='admin'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
+            # Crear/actualizar usuario admin
+            admin = Usuario.query.filter_by(username='admin').first()
+            if not admin:
+                admin = Usuario(
+                    nombre_1='Admin',
+                    apellido_1='Sistema',
+                    cargo='Administrador',
+                    num_doc=999999,
+                    documento_id=1,
+                    username='admin',
+                    rol_id=rol_admin.rol_id  # Asignar rol de admin
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                app.logger.info("Base de datos inicializada con usuario admin")
+                print("✅ Base de datos inicializada con usuario admin")
+            else:
+                # Actualizar el rol del admin existente
+                admin.rol_id = rol_admin.rol_id
+                app.logger.info("Usuario admin existente actualizado con rol de administrador")
+                print("✅ Usuario admin existente actualizado con rol de administrador")
+        
+        # Confirmar todos los cambios
+        db.session.commit()
+    
+    @app.cli.command("update-admin-permissions")
+    def update_admin_permissions():
+        """Actualiza los permisos del administrador para incluir importación de datos."""
+        from app.models import Usuario, Rol, Permiso
+        
+        try:
+            # Usar get_or_create para el permiso
+            permiso_importar = Permiso.query.filter_by(codigo='importar_datos').first()
+            if not permiso_importar:
+                permiso_importar = Permiso(
+                    codigo='importar_datos', 
+                    descripcion='Permite importar datos históricos y datasets'
+                )
+                db.session.add(permiso_importar)
+            
+            # Usar get_or_create para el rol admin
+            rol_admin = Rol.query.filter_by(nombre='admin').first()
+            if not rol_admin:
+                rol_admin = Rol(
+                    nombre='admin',
+                    descripcion='Administrador del sistema con acceso completo'
+                )
+                db.session.add(rol_admin)
+                db.session.flush()  # Necesario para obtener el ID antes de usarlo
+            
+            # Asignar permiso al rol si no lo tiene ya
+            if not rol_admin.permisos or permiso_importar not in rol_admin.permisos:
+                rol_admin.permisos.append(permiso_importar)
+            
+            # Actualizar usuario admin
+            admin = Usuario.query.filter_by(username='admin').first()
+            if admin:
+                admin.rol_id = rol_admin.rol_id
+                app.logger.info("Permisos del administrador actualizados correctamente")
+                print("✅ Permisos del administrador actualizados correctamente")
+            else:
+                app.logger.warning("No se encontró usuario admin")
+                print("⚠️ No se encontró usuario admin")
+            
             db.session.commit()
-            app.logger.info("Base de datos inicializada con usuario admin")
-        else:
-            app.logger.info("Ya existen usuarios en la base de datos")
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error(f"Error al actualizar permisos del admin: {str(e)}")
+            print(f"❌ Error: {str(e)}")
     
     @app.cli.command("importar-historico")
     def importar_historico_cmd():
