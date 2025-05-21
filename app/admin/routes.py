@@ -360,9 +360,12 @@ def eliminar_densidad():
 @bp.route('/importar-historico', methods=['GET', 'POST'])
 @login_required
 def importar_historico():
-    """Importación de datos históricos"""
+    """Importación de datos históricos incluyendo pérdidas"""
     if not _check_permission():
         return redirect(url_for('main.index'))
+    
+    # Variable para mostrar resultados
+    import_results = None
     
     if request.method == 'POST':
         if 'excel_file' not in request.files:
@@ -380,15 +383,30 @@ def importar_historico():
             file.save(temp_path)
             
             try:
-                from app.utils.optimizado import importar_historico
-                importar_historico(temp_path)
-                flash('Datos históricos importados correctamente', 'success')
+                # Usar el importador optimizado
+                from app.utils import HistoricalImporter
+                import_results = HistoricalImporter.importar_historico(temp_path)
+                
+                if 'error' in import_results:
+                    flash(f'Error durante la importación: {import_results["error"]}', 'danger')
+                else:
+                    # Mostrar un mensaje de éxito detallado
+                    success_msg = (
+                        f'Datos históricos importados correctamente. '
+                        f'Siembras: {import_results.get("siembras_creadas", 0)} creadas, '
+                        f'Cortes: {import_results.get("cortes_creados", 0)} creados, '
+                        f'Pérdidas: {import_results.get("perdidas_creadas", 0)} creadas'
+                    )
+                    flash(success_msg, 'success')
             except Exception as e:
                 flash(f'Error durante la importación: {str(e)}', 'danger')
             finally:
+                # Limpiar archivo temporal
                 if os.path.exists(temp_path):
                     os.remove(temp_path)
         else:
-            flash('Formato de archivo no permitido', 'danger')
+            flash('Formato de archivo no permitido. Use archivos Excel (.xlsx, .xls)', 'danger')
     
-    return render_template('admin/importar_historico.html', title='Importar Datos Históricos')
+    return render_template('admin/importar_historico.html', 
+                          title='Importar Datos Históricos',
+                          import_results=import_results)

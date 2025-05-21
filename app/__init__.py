@@ -206,22 +206,39 @@ def register_cli_commands(app):
             app.logger.error(f"Error al actualizar permisos del admin: {str(e)}")
             print(f"❌ Error: {str(e)}")
     
-    @app.cli.command("importar-historico")
-    def importar_historico_cmd():
-        """Importa datos históricos desde un archivo Excel."""
-        from app.utils.importar_historico import importar_historico
-        import click
-        
-        archivo = click.prompt("Ruta del archivo Excel", type=click.Path(exists=True))
-        click.echo(f"Importando datos desde {archivo}...")
-        
-        result = importar_historico(archivo)
-        if 'error' in result:
-            click.echo(f"Error: {result['error']}", err=True)
-        else:
-            click.echo("Importación completada con éxito:")
-            click.echo(f"Siembras creadas: {result.get('siembras_creadas', 0)}")
-            click.echo(f"Cortes creados: {result.get('cortes_creados', 0)}")
+        @app.cli.command("importar-historico")
+        def importar_historico_cmd():
+            """Importa datos históricos desde un archivo Excel incluyendo pérdidas."""
+            import click
+            
+            archivo = click.prompt("Ruta del archivo Excel", type=click.Path(exists=True))
+            click.echo(f"Importando datos desde {archivo}...")
+            
+            try:
+                # Usar el importador optimizado
+                from app.utils import HistoricalImporter
+                result = HistoricalImporter.importar_historico(archivo)
+                
+                if 'error' in result:
+                    click.secho(f"Error: {result['error']}", err=True, fg='red')
+                    if 'detalles_errores' in result and result['detalles_errores']:
+                        click.echo("Detalles de errores:")
+                        for i, error in enumerate(result['detalles_errores'][:5], 1):  # Primeros 5 errores
+                            click.echo(f"{i}. Fila {error['fila']}: {error['error']}")
+                        if len(result['detalles_errores']) > 5:
+                            click.echo(f"... y {len(result['detalles_errores']) - 5} errores más.")
+                else:
+                    click.secho("Importación completada con éxito:", fg='green')
+                    click.echo(f"Siembras creadas: {result.get('siembras_creadas', 0)}")
+                    click.echo(f"Siembras actualizadas: {result.get('siembras_actualizadas', 0)}")
+                    click.echo(f"Cortes creados: {result.get('cortes_creados', 0)}")
+                    click.echo(f"Cortes actualizados: {result.get('cortes_actualizados', 0)}")
+                    click.echo(f"Pérdidas creadas: {result.get('perdidas_creadas', 0)}")
+                    click.echo(f"Causas de pérdida creadas: {result.get('causas_perdida_creadas', 0)}")
+                    if result.get('errores', 0) > 0:
+                        click.echo(f"Registros con errores: {result.get('errores', 0)}")
+            except Exception as e:
+                click.secho(f"Error al realizar la importación: {str(e)}", err=True, fg='red')
 
 def configure_logging(app):
     """Configura el sistema de logging de la aplicación."""
