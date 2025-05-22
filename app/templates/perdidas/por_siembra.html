@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/_perdidas_stats.html" import perdidas_stats %}
 
 {% block content %}
 <div class="container">
@@ -32,23 +33,7 @@
                 </div>
             </div>
             
-            <!-- Estadísticas -->
-            <div class="alert alert-info mt-3">
-                <div class="row">
-                    <div class="col-md-3">
-                        <p class="mb-0"><strong>Total Plantas:</strong> {{ total_plantas }}</p>
-                    </div>
-                    <div class="col-md-3">
-                        <p class="mb-0"><strong>Total Tallos:</strong> {{ total_tallos }}</p>
-                    </div>
-                    <div class="col-md-3">
-                        <p class="mb-0"><strong>Total Pérdidas:</strong> {{ total_perdidas }}</p>
-                    </div>
-                    <div class="col-md-3">
-                        <p class="mb-0"><strong>Disponible:</strong> {{ disponible }}</p>
-                    </div>
-                </div>
-            </div>
+            {{ perdidas_stats(total_plantas, total_tallos, total_perdidas, disponible) }}
         </div>
     </div>
     

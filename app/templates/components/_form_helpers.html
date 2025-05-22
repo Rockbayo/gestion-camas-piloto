@@ -1,0 +1,24 @@
+{% macro render_form_field(field, help_text=None, rows=None, type=None, min=None, max=None) %}
+<div class="form-group mb-3">
+    {{ field.label(class="form-label") }}
+    {% if type %}
+        {{ field(class="form-control", type=type) }}
+    {% elif rows %}
+        {{ field(class="form-control", rows=rows) }}
+    {% else %}
+        {{ field(class=field.class|default('form-control')) }}
+    {% endif %}
+    {% for error in field.errors %}
+    <span class="text-danger">{{ error }}</span>
+    {% endfor %}
+    {% if help_text or min or max %}
+    <div class="form-text">
+        {% if help_text %}{{ help_text }}{% endif %}
+        {% if min or max %}
+            {% if help_text %}<br>{% endif %}
+            El valor debe estar entre {{ min|default('1') }} y {{ max }}.
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}

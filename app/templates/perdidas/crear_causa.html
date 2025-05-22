@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/_form_helpers.html" import render_form_field %}
 
 {% block content %}
 <div class="container">
@@ -26,35 +27,14 @@
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            {{ form.nombre.label(class="form-label") }}
-                            {{ form.nombre(class="form-control") }}
-                            {% for error in form.nombre.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                        {{ render_form_field(form.nombre) }}
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            {{ form.es_predefinida.label(class="form-label") }}
-                            {{ form.es_predefinida(class="form-select") }}
-                            {% for error in form.es_predefinida.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                            <div class="form-text">
-                                Seleccione "Predefinida" para causas estándar, o "Personalizada" para causas específicas.
-                            </div>
-                        </div>
+                        {{ render_form_field(form.es_predefinida, help_text="Seleccione 'Predefinida' para causas estándar, o 'Personalizada' para causas específicas.") }}
                     </div>
                 </div>
                 
-                <div class="form-group mb-4">
-                    {{ form.descripcion.label(class="form-label") }}
-                    {{ form.descripcion(class="form-control", rows=3) }}
-                    {% for error in form.descripcion.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                </div>
+                {{ render_form_field(form.descripcion, rows=3) }}
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="{{ url_for('perdidas.causas') }}" class="btn btn-secondary me-md-2">Cancelar</a>

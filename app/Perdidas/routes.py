@@ -237,7 +237,28 @@ def por_siembra(siembra_id):
 @login_required
 def resumen():
     """Resumen general de pérdidas"""
+    resumen_global_raw = get_loss_summary()
+    perdidas_variedad_raw = get_variety_loss_summary()
+    
+    # Procesar datos para el template
+    resumen_global_processed = []
+    total_global = sum(item.total for item in resumen_global_raw) if resumen_global_raw else 0
+    
+    if resumen_global_raw and total_global > 0:
+        for item in resumen_global_raw:
+            percentage = round((item.total / total_global * 100), 1)
+            resumen_global_processed.append({
+                'cells': [
+                    item.nombre,
+                    item.total,
+                    f"{percentage}%",
+                    percentage
+                ]
+            })
+    
     return render_template('perdidas/resumen.html',
                          title='Resumen de Pérdidas',
-                         resumen_global=get_loss_summary(),
-                         perdidas_variedad=get_variety_loss_summary())
+                         resumen_global=resumen_global_raw,
+                         resumen_global_processed=resumen_global_processed,
+                         total_global=total_global,
+                         perdidas_variedad=perdidas_variedad_raw)

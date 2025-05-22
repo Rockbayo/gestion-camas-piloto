@@ -1,0 +1,47 @@
+{% macro perdidas_filters(causas=[], causa_id=None, fecha_desde=None, fecha_hasta=None) %}
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-filter"></i> Filtros
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('perdidas.index') }}">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="causa_id" class="form-label">Causa de Pérdida</label>
+                    <select id="causa_id" name="causa_id" class="form-select">
+                        <option value="">Todas las causas</option>
+                        {% for causa in causas %}
+                        <option value="{{ causa.causa_id }}" {% if causa_id|string == causa.causa_id|string %}selected{% endif %}>
+                            {{ causa.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="fecha_desde" class="form-label">Fecha Desde</label>
+                    <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" 
+                           value="{{ fecha_desde }}">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
+                    <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control"
+                           value="{{ fecha_hasta }}">
+                </div>
+                
+                <div class="col-md-3 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                    <a href="{{ url_for('perdidas.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endmacro %}

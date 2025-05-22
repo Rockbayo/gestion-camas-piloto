@@ -1,0 +1,41 @@
+{% macro progress_table(headers, rows, total_row=None, progress_class="bg-primary") %}
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                {% for header in headers %}
+                <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                {% for cell in row.cells[:-1] %}
+                <td>{{ cell }}</td>
+                {% endfor %}
+                <td>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {{ progress_class }}" role="progressbar" 
+                             style="width: {{ row.cells[-1] }}%;" 
+                             aria-valuenow="{{ row.cells[-1] }}" 
+                             aria-valuemin="0" aria-valuemax="100">
+                            {{ row.cells[-1] }}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if total_row %}
+        <tfoot>
+            <tr class="table-dark">
+                {% for cell in total_row %}
+                <th>{{ cell }}</th>
+                {% endfor %}
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endmacro %}

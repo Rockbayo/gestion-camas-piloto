@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/_form_helpers.html" import render_form_field %}
 
 {% block content %}
 <div class="container">
@@ -70,47 +71,17 @@
                 
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.causa_id.label(class="form-label") }}
-                            {{ form.causa_id(class="form-select") }}
-                            {% for error in form.causa_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                        {{ render_form_field(form.causa_id) }}
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group">
-                            {{ form.fecha_perdida.label(class="form-label") }}
-                            {{ form.fecha_perdida(class="form-control", type="date") }}
-                            {% for error in form.fecha_perdida.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
+                        {{ render_form_field(form.fecha_perdida, type="date") }}
                     </div>
                 </div>
                 
-                <div class="form-group mb-3">
-                    {{ form.cantidad.label(class="form-label") }}
-                    {{ form.cantidad(class="form-control", min="1", max=disponible) }}
-                    {% for error in form.cantidad.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                    <div class="form-text">
-                        {% if disponible is not none %}
-                        El valor debe ser mayor a 0 y no puede superar {{ disponible }} plantas disponibles.
-                        {% else %}
-                        El valor debe ser mayor a 0.
-                        {% endif %}
-                    </div>
-                </div>
+                {{ render_form_field(form.cantidad, min="1", max=disponible, 
+                    help_text="El valor debe ser mayor a 0 y no puede superar " ~ disponible ~ " plantas disponibles." if disponible is not none else "El valor debe ser mayor a 0.") }}
                 
-                <div class="form-group mb-3">
-                    {{ form.observaciones.label(class="form-label") }}
-                    {{ form.observaciones(class="form-control", rows=3) }}
-                    {% for error in form.observaciones.errors %}
-                    <span class="text-danger">{{ error }}</span>
-                    {% endfor %}
-                </div>
+                {{ render_form_field(form.observaciones, rows=3) }}
                 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                     <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>

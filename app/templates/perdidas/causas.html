@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/_model_eliminar.html" import modal_eliminar %}
 
 {% block content %}
 <div class="container">
@@ -50,32 +51,12 @@
                                     <a href="{{ url_for('perdidas.editar_causa', id=causa.causa_id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Editar">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#eliminarModal{{ causa.causa_id }}" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Modal de Confirmación para Eliminar -->
-                                <div class="modal fade" id="eliminarModal{{ causa.causa_id }}" tabindex="-1" aria-labelledby="eliminarModalLabel{{ causa.causa_id }}" aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header bg-danger text-white">
-                                                <h5 class="modal-title" id="eliminarModalLabel{{ causa.causa_id }}">Confirmar Eliminación</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <p>¿Está seguro que desea eliminar la causa de pérdida <strong>{{ causa.nombre }}</strong>?</p>
-                                                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Esta acción no se puede deshacer.</p>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                <form action="{{ url_for('perdidas.eliminar_causa', id=causa.causa_id) }}" method="POST">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                                                </form>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {{ modal_eliminar(
+                                        id=causa.causa_id,
+                                        title="Eliminar Causa",
+                                        body="¿Está seguro que desea eliminar la causa de pérdida <strong>" ~ causa.nombre ~ "</strong>?",
+                                        url=url_for('perdidas.eliminar_causa', id=causa.causa_id)
+                                    }}
                                 </div>
                             </td>
                         </tr>
