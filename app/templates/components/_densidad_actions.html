@@ -3,7 +3,7 @@
         data-bs-target="#editarDensidadModal"
         data-id="{{ item.densidad_id }}"
         data-nombre="{{ item.densidad }}"
-        data-valor="{{ item.valor }}">
+        data-valor="{{ "%.1f"|format(item.valor) }}">
     <i class="fas fa-edit"></i>
 </button>
 <button type="button" class="btn btn-sm btn-danger"

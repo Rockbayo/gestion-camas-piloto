@@ -176,6 +176,16 @@ class Bloque(BaseModel):
     bloque_id = db.Column(db.SmallInteger, primary_key=True, autoincrement=True)
     bloque = db.Column(db.String(20), nullable=False, unique=True)
     
+    @classmethod
+    def get_all_ordered(cls):
+        """Obtiene todos los bloques ordenados numéricamente."""
+        return cls.query.order_by(
+            # Ordenar por longitud primero, luego alfabéticamente
+            # Esto asegura que "01" venga antes que "10"
+            func.length(cls.bloque),
+            cls.bloque
+        ).all()
+    
     def __repr__(self):
         return f'<Bloque {self.bloque}>'
 
@@ -187,6 +197,16 @@ class Cama(BaseModel):
     cama_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     cama = db.Column(db.String(10), nullable=False, unique=True)
     
+    @classmethod
+    def get_all_ordered(cls):
+        """Obtiene todas las camas ordenadas numéricamente."""
+        return cls.query.order_by(
+            # Ordenar por longitud primero, luego alfabéticamente
+            # Esto asegura que "001" venga antes que "010"
+            func.length(cls.cama),
+            cls.cama
+        ).all()
+    
     def __repr__(self):
         return f'<Cama {self.cama}>'
 
@@ -197,6 +217,11 @@ class Lado(BaseModel):
     __tablename__ = 'lados'
     lado_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     lado = db.Column(db.String(10), nullable=False, unique=True)
+    
+    @classmethod
+    def get_all_ordered(cls):
+        """Obtiene todos los lados ordenados alfabéticamente."""
+        return cls.query.order_by(cls.lado).all()
     
     def __repr__(self):
         return f'<Lado {self.lado}>'
@@ -217,6 +242,15 @@ class BloqueCamaLado(BaseModel):
     lado = db.relationship('Lado', backref=db.backref('ubicaciones', lazy='dynamic'))
     
     __table_args__ = (db.UniqueConstraint('bloque_id', 'cama_id', 'lado_id'),)
+    
+    @classmethod
+    def get_all_ordered(cls):
+        """Obtiene todas las ubicaciones ordenadas por bloque, cama y lado."""
+        return cls.query.join(Bloque).join(Cama).join(Lado).order_by(
+            func.length(Bloque.bloque), Bloque.bloque,
+            func.length(Cama.cama), Cama.cama,
+            Lado.lado
+        ).all()
     
     @hybrid_property
     def ubicacion_completa(self) -> str:
@@ -333,8 +367,18 @@ class Densidad(BaseModel):
     densidad = db.Column(db.String(20), nullable=False, unique=True)
     valor = db.Column(db.Numeric(10, 4), nullable=False, default=1.0)  # Plantas/m²
     
+    @property
+    def valor_formateado(self):
+        """Devuelve el valor de densidad formateado con 1 decimal."""
+        return f"{float(self.valor):.1f}"
+    
+    @property
+    def descripcion_completa(self):
+        """Devuelve la descripción completa de la densidad."""
+        return f"{self.densidad} ({self.valor_formateado} plantas/m²)"
+    
     def __repr__(self):
-        return f'<Densidad {self.densidad} ({self.valor} plantas/m²)>'
+        return f'<Densidad {self.densidad} ({self.valor_formateado} plantas/m²)>'
 
 class Siembra(BaseModel):
     """

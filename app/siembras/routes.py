@@ -4,7 +4,9 @@ from datetime import datetime
 from . import bp
 from .forms import SiembraForm, InicioCorteForm
 from .services import SiembraService
-from app.models import Siembra, Area, Densidad
+from app.models import Siembra, Area, Densidad, Color, Variedad, FlorColor
+from app import db
+from sqlalchemy import func
 
 @bp.route('/')
 @login_required
@@ -19,6 +21,7 @@ def crear():
     form = SiembraForm()
     
     if request.method == 'GET':
+        # Filtrado de variedades (manteniendo compatibilidad con código existente)
         if request.args.get('filter') == 'true':
             variedades = SiembraService.filtrar_variedades(
                 request.args.get('flor_id', type=int),
@@ -26,6 +29,7 @@ def crear():
             )
             return jsonify([{'id': v.variedad_id, 'text': v.variedad} for v in variedades])
         
+        # Cálculo de área (manteniendo compatibilidad con código existente)
         if request.args.get('calculate') == 'true':
             resultado = SiembraService.calcular_area(
                 request.args.get('cantidad_plantas', type=int),
@@ -52,6 +56,131 @@ def crear():
             flash(f'Error al registrar siembra: {str(e)}', 'danger')
     
     return render_template('siembras/crear.html', title='Nueva Siembra', form=form)
+
+@bp.route('/api/colores/<int:flor_id>')
+@login_required
+def get_colores_por_flor(flor_id):
+    """
+    API endpoint para obtener colores disponibles para una flor específica.
+    """
+    try:
+        if flor_id == 0:  # "Todas las flores"
+            colores = Color.query.order_by(Color.color).all()
+        else:
+            # Obtener colores que tienen combinación con esta flor
+            colores = Color.query.join(FlorColor).filter(
+                FlorColor.flor_id == flor_id
+            ).order_by(Color.color).all()
+        
+        colores_data = [
+            {'id': color.color_id, 'nombre': color.color}
+            for color in colores
+        ]
+        
+        return jsonify({
+            'success': True,
+            'colores': colores_data
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/api/variedades/<int:flor_id>/<int:color_id>')
+@login_required
+def get_variedades_por_flor_color(flor_id, color_id):
+    """
+    API endpoint para obtener variedades disponibles para una combinación flor-color.
+    """
+    try:
+        query = Variedad.query.join(FlorColor)
+        
+        # Filtrar por flor si no es "Todas las flores"
+        if flor_id != 0:
+            query = query.filter(FlorColor.flor_id == flor_id)
+        
+        # Filtrar por color si no es "Todos los colores"
+        if color_id != 0:
+            query = query.filter(FlorColor.color_id == color_id)
+        
+        variedades = query.order_by(Variedad.variedad).all()
+        
+        variedades_data = [
+            {
+                'id': variedad.variedad_id,
+                'nombre': variedad.variedad,
+                'flor': variedad.flor_color.flor.flor,
+                'color': variedad.flor_color.color.color,
+                'nombre_completo': variedad.variedad  # Solo el nombre de la variedad
+            }
+            for variedad in variedades
+        ]
+        
+        return jsonify({
+            'success': True,
+            'variedades': variedades_data
+        })
+    
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@bp.route('/api/calcular-area')
+@login_required
+def calcular_area_ajax():
+    """
+    API endpoint para calcular área basada en cantidad de plantas y densidad.
+    """
+    try:
+        cantidad_plantas = request.args.get('cantidad_plantas', type=int)
+        densidad_id = request.args.get('densidad_id', type=int)
+        
+        if not cantidad_plantas or not densidad_id:
+            return jsonify({
+                'success': False,
+                'error': 'Parámetros faltantes'
+            }), 400
+        
+        # Obtener la densidad
+        densidad = Densidad.query.get(densidad_id)
+        if not densidad:
+            return jsonify({
+                'success': False,
+                'error': 'Densidad no encontrada'
+            }), 404
+        
+        # Calcular área
+        area_calculada = round(float(cantidad_plantas) / float(densidad.valor), 2)
+        
+        # Buscar o crear área
+        area_nombre = f"ÁREA {area_calculada}m²"
+        area = Area.query.filter(
+            Area.area.between(area_calculada * 0.99, area_calculada * 1.01)
+        ).first()
+        
+        if not area:
+            area = Area(siembra=area_nombre, area=area_calculada)
+            db.session.add(area)
+            db.session.flush()
+            db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'area_calculada': area_calculada,
+            'area_id': area.area_id,
+            'area_nombre': area.siembra
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @bp.route('/editar/<int:id>', methods=['GET', 'POST'])
 @login_required

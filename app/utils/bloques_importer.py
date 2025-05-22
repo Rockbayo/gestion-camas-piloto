@@ -2,10 +2,10 @@
 Módulo para importación de bloques, camas y lados desde archivos Excel.
 
 Mejoras:
-- Mejor estructuración del código
+- Conserva el formato numérico con ceros a la izquierda
+- Mejor ordenamiento en consultas
 - Manejo más robusto de transacciones
 - Estadísticas más detalladas
-- Documentación más clara
 """
 
 from typing import Dict, Tuple, Optional, Any
@@ -17,6 +17,7 @@ from app.utils.base_importer import BaseImporter
 class BloquesImporter(BaseImporter):
     """
     Importador específico para datos de bloques, camas y lados.
+    Conserva formatos numéricos con ceros a la izquierda.
     """
     
     REQUIRED_COLUMNS = ['BLOQUE', 'CAMA']
@@ -44,8 +45,8 @@ class BloquesImporter(BaseImporter):
             Tuple: (éxito, mensaje, estadísticas)
         """
         try:
-            # Preparar DataFrame
-            df, message, success = cls.prepare_dataframe(
+            # Preparar DataFrame con manejo especial para formatos numéricos
+            df, message, success = cls.prepare_dataframe_with_format_preservation(
                 file_path=file_path,
                 column_mapping=column_mapping,
                 skip_first_row=skip_first_row,
@@ -54,8 +55,8 @@ class BloquesImporter(BaseImporter):
             if not success:
                 return False, message, {}
             
-            # Limpiar y preparar datos
-            df = cls.clean_dataframe(df)
+            # Limpiar y preparar datos conservando formatos
+            df = cls.clean_dataframe_preserve_format(df)
             
             if validate_only:
                 return True, "Dataset validado correctamente", {
@@ -83,8 +84,46 @@ class BloquesImporter(BaseImporter):
             return False, f"Error durante la importación: {str(e)}", {}
     
     @classmethod
-    def clean_dataframe(cls, df: pd.DataFrame) -> pd.DataFrame:
-        """Limpia y prepara el DataFrame para importación."""
+    def prepare_dataframe_with_format_preservation(
+        cls,
+        file_path: str,
+        column_mapping: Optional[Dict[str, str]] = None,
+        skip_first_row: bool = True,
+        required_columns: Optional[list] = None
+    ) -> Tuple[pd.DataFrame, str, bool]:
+        """
+        Prepara un DataFrame conservando el formato de texto de las columnas numéricas.
+        """
+        try:
+            # Leer archivo preservando el formato como texto
+            if file_path.endswith('.csv'):
+                df = pd.read_csv(file_path, dtype=str)
+            else:
+                # Para Excel, leer como string para preservar ceros a la izquierda
+                df = pd.read_excel(file_path, dtype=str)
+            
+            # Aplicar transformaciones básicas
+            if column_mapping:
+                df = df.rename(columns=column_mapping)
+            if skip_first_row and len(df) > 1:
+                df = df.iloc[1:].reset_index(drop=True)
+            
+            # Validar columnas requeridas
+            if required_columns:
+                missing = [col for col in required_columns if col not in df.columns]
+                if missing:
+                    return None, f"Columnas requeridas faltantes: {', '.join(missing)}", False
+            
+            return df, "DataFrame preparado correctamente conservando formatos", True
+            
+        except Exception as e:
+            return None, f"Error al preparar DataFrame: {str(e)}", False
+    
+    @classmethod
+    def clean_dataframe_preserve_format(cls, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Limpia el DataFrame conservando el formato numérico con ceros a la izquierda.
+        """
         # Manejar valores nulos
         df = df.dropna(subset=cls.REQUIRED_COLUMNS)
         
@@ -92,10 +131,15 @@ class BloquesImporter(BaseImporter):
         if 'LADO' not in df.columns:
             df['LADO'] = cls.DEFAULT_LADO
         
-        # Limpiar strings
+        # Limpiar strings pero conservar formato numérico
         for col in cls.REQUIRED_COLUMNS + cls.OPTIONAL_COLUMNS:
             if col in df.columns:
-                df[col] = df[col].astype(str).str.strip().str.upper()
+                # Para BLOQUE y CAMA, conservar el formato pero limpiar espacios
+                if col in ['BLOQUE', 'CAMA']:
+                    df[col] = df[col].astype(str).str.strip()
+                else:
+                    # Para otros campos (como LADO), aplicar mayúsculas
+                    df[col] = df[col].astype(str).str.strip().str.upper()
         
         return df
     
@@ -124,7 +168,7 @@ class BloquesImporter(BaseImporter):
     
     @classmethod
     def get_or_create_bloque(cls, nombre: str, stats: Dict[str, Any]) -> Bloque:
-        """Obtiene o crea un bloque."""
+        """Obtiene o crea un bloque conservando el formato numérico."""
         bloque = Bloque.query.filter_by(bloque=nombre).first()
         if not bloque:
             bloque = Bloque(bloque=nombre)
@@ -136,7 +180,7 @@ class BloquesImporter(BaseImporter):
     
     @classmethod
     def get_or_create_cama(cls, nombre: str, stats: Dict[str, Any]) -> Cama:
-        """Obtiene o crea una cama."""
+        """Obtiene o crea una cama conservando el formato numérico."""
         cama = Cama.query.filter_by(cama=nombre).first()
         if not cama:
             cama = Cama(cama=nombre)

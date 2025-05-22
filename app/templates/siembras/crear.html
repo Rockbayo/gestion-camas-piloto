@@ -55,9 +55,12 @@
                 <div class="row mb-4">
                     <div class="col-md-12">
                         <h5 class="border-bottom pb-2">Variedad</h5>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Seleccione primero el tipo de flor, luego el color para filtrar las variedades disponibles.
+                        </div>
                     </div>
                     <!-- Filtros de Flor y Color -->
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="form-group">
                             {{ form.flor_id.label(class="form-label") }}
                             {{ form.flor_id(class="form-select", id="flor_id") }}
@@ -66,22 +69,38 @@
                             {% endfor %}
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="form-group">
                             {{ form.color_id.label(class="form-label") }}
                             {{ form.color_id(class="form-select", id="color_id") }}
                             {% for error in form.color_id.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
+                            <div class="form-text">
+                                <span id="color-loading" class="text-muted" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Cargando colores...
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             {{ form.variedad_id.label(class="form-label") }}
                             {{ form.variedad_id(class="form-select", id="variedad_id") }}
                             {% for error in form.variedad_id.errors %}
                             <span class="text-danger">{{ error }}</span>
                             {% endfor %}
+                            <div class="form-text">
+                                <span id="variedad-loading" class="text-muted" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Cargando variedades...
+                                </span>
+                                <span id="variedad-info" class="text-success" style="display: none;">
+                                    <i class="fas fa-check-circle"></i> <span id="variedad-count">0</span> variedades disponibles
+                                </span>
+                                <div id="variedad-seleccionada" class="text-info mt-1" style="display: none;">
+                                    <small><i class="fas fa-info-circle"></i> <strong>Tipo:</strong> <span id="variedad-detalle"></span></small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -127,7 +146,12 @@
                                 <input type="text" class="form-control" id="area_calculada" readonly>
                                 <span class="input-group-text">m²</span>
                             </div>
-                            <small class="form-text text-muted">Área calculada automáticamente según cantidad de plantas y densidad.</small>
+                            <small class="form-text text-muted">
+                                Área calculada automáticamente según cantidad de plantas y densidad.
+                                <span id="area-loading" class="text-muted" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> Calculando...
+                                </span>
+                            </small>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -161,35 +185,110 @@
         const areaAsignadaInput = document.getElementById('area_asignada');
         const areaIdInput = document.getElementById('area_id');
         
-        // Función para filtrar variedades según flor y color seleccionados
-        function filtrarVariedades() {
-            const florId = florSelect.value;
-            const colorId = colorSelect.value;
-            
-            fetch(`{{ url_for('siembras.crear') }}?filter=true&flor_id=${florId}&color_id=${colorId}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Limpiar select actual
-                    variedadSelect.innerHTML = '';
-                    
-                    // Agregar nuevas opciones
-                    data.forEach(variedad => {
-                        const option = document.createElement('option');
-                        option.value = variedad.id;
-                        option.textContent = variedad.text;
-                        variedadSelect.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Error al filtrar variedades:', error));
+        // Elementos de carga
+        const colorLoading = document.getElementById('color-loading');
+        const variedadLoading = document.getElementById('variedad-loading');
+        const variedadInfo = document.getElementById('variedad-info');
+        const variedadCount = document.getElementById('variedad-count');
+        const areaLoading = document.getElementById('area-loading');
+        
+        // Función para mostrar/ocultar elementos de carga
+        function showLoading(element, show = true) {
+            if (element) {
+                element.style.display = show ? 'inline' : 'none';
+            }
         }
         
-        /// Función para calcular el área según cantidad de plantas y densidad
+        // Función para filtrar colores por flor
+        function filtrarColores() {
+            const florId = florSelect.value;
+            
+            if (!florId || florId === '0') {
+                // Si no hay flor seleccionada, mostrar todos los colores
+                return;
+            }
+            
+            showLoading(colorLoading, true);
+            
+            fetch(`{{ url_for('siembras.get_colores_por_flor', flor_id=0) }}`.replace('0', florId))
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(colorLoading, false);
+                    
+                    if (data.success) {
+                        // Limpiar opciones actuales
+                        colorSelect.innerHTML = '<option value="0">Todos los colores</option>';
+                        
+                        // Agregar nuevas opciones
+                        data.colores.forEach(color => {
+                            const option = document.createElement('option');
+                            option.value = color.id;
+                            option.textContent = color.nombre;
+                            colorSelect.appendChild(option);
+                        });
+                        
+                        // Limpiar variedades cuando cambie la flor
+                        variedadSelect.innerHTML = '<option value="0">-- Seleccione una variedad --</option>';
+                        filtrarVariedades();
+                    } else {
+                        console.error('Error al cargar colores:', data.error);
+                        alert('Error al cargar los colores: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    showLoading(colorLoading, false);
+                    console.error('Error:', error);
+                    alert('Error de conexión al cargar colores');
+                });
+        }
+        
+        // Función para filtrar variedades por flor y color
+        function filtrarVariedades() {
+            const florId = florSelect.value || '0';
+            const colorId = colorSelect.value || '0';
+            
+            showLoading(variedadLoading, true);
+            showLoading(variedadInfo, false);
+            
+            fetch(`{{ url_for('siembras.get_variedades_por_flor_color', flor_id=0, color_id=0) }}`.replace('0/0', `${florId}/${colorId}`))
+                .then(response => response.json())
+                .then(data => {
+                    showLoading(variedadLoading, false);
+                    
+                    if (data.success) {
+                        // Limpiar opciones actuales
+                        variedadSelect.innerHTML = '<option value="0">-- Seleccione una variedad --</option>';
+                        
+                        // Agregar nuevas opciones
+                        data.variedades.forEach(variedad => {
+                            const option = document.createElement('option');
+                            option.value = variedad.id;
+                            option.textContent = variedad.nombre_completo;
+                            // Agregar información adicional como data attributes para referencia
+                            option.setAttribute('data-flor', variedad.flor);
+                            option.setAttribute('data-color', variedad.color);
+                            variedadSelect.appendChild(option);
+                        });
+                        
+                        // Mostrar información de variedades disponibles
+                        variedadCount.textContent = data.variedades.length;
+                        showLoading(variedadInfo, true);
+                    } else {
+                        console.error('Error al cargar variedades:', data.error);
+                        alert('Error al cargar las variedades: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    showLoading(variedadLoading, false);
+                    console.error('Error:', error);
+                    alert('Error de conexión al cargar variedades');
+                });
+        }
+        
+        // Función para calcular el área según cantidad de plantas y densidad
         function calcularArea() {
-            const cantidadPlantas = document.getElementById('cantidad_plantas').value;
-            const densidadId = document.getElementById('densidad_id').value;
-            const areaCalculadaInput = document.getElementById('area_calculada');
-            const areaIdInput = document.getElementById('area_id');
-            const areaAsignadaInput = document.getElementById('area_asignada');
+            const cantidadPlantas = cantidadPlantasInput.value;
+            const densidadId = densidadSelect.value;
             
             // Reset values
             areaCalculadaInput.value = '';
@@ -197,50 +296,61 @@
             areaAsignadaInput.value = '';
             
             if (cantidadPlantas && densidadId) {
-                // Obtener el texto de la densidad seleccionada para mostrar en los logs
-                const densidadText = document.getElementById('densidad_id').options[document.getElementById('densidad_id').selectedIndex].text;
-                console.log(`Calculando área para ${cantidadPlantas} plantas con densidad ID: ${densidadId} (${densidadText})`);
+                showLoading(areaLoading, true);
                 
-                // Realizar petición AJAX para obtener el cálculo del servidor
-                fetch(`${window.location.pathname}?calculate=true&cantidad_plantas=${cantidadPlantas}&densidad_id=${densidadId}`)
+                fetch(`{{ url_for('siembras.calcular_area_ajax') }}?cantidad_plantas=${cantidadPlantas}&densidad_id=${densidadId}`)
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Respuesta del servidor:', data);
-                        if (data.error) {
-                            areaCalculadaInput.value = 'Error';
-                            console.error('Error en cálculo:', data.error);
-                            alert('Error al calcular el área: ' + data.error);
-                        } else {
+                        showLoading(areaLoading, false);
+                        
+                        if (data.success) {
                             areaCalculadaInput.value = data.area_calculada;
                             areaIdInput.value = data.area_id || '';
                             areaAsignadaInput.value = data.area_nombre || `ÁREA ${data.area_calculada}m²`;
+                        } else {
+                            console.error('Error en cálculo:', data.error);
+                            areaCalculadaInput.value = 'Error';
+                            alert('Error al calcular el área: ' + data.error);
                         }
                     })
                     .catch(error => {
+                        showLoading(areaLoading, false);
                         console.error('Error al calcular área:', error);
                         areaCalculadaInput.value = 'Error';
                         alert('Error en la comunicación con el servidor');
                     });
             }
         }
-
-// Escuchar cambios en cantidad de plantas y densidad
-document.getElementById('cantidad_plantas').addEventListener('input', calcularArea);
-document.getElementById('densidad_id').addEventListener('change', calcularArea);
         
-        // Escuchar cambios en cantidad de plantas y densidad
+        // Event listeners
+        florSelect.addEventListener('change', filtrarColores);
+        colorSelect.addEventListener('change', filtrarVariedades);
         cantidadPlantasInput.addEventListener('input', calcularArea);
         densidadSelect.addEventListener('change', calcularArea);
         
         // Validación del formulario
         const siembraForm = document.getElementById('siembraForm');
         siembraForm.addEventListener('submit', function(event) {
+            // Verificar que se haya seleccionado una variedad válida
+            if (!variedadSelect.value || variedadSelect.value === '0') {
+                event.preventDefault();
+                alert('Por favor seleccione una variedad válida.');
+                variedadSelect.focus();
+                return;
+            }
+            
             // Verificar que se haya calculado un área
             if (!areaCalculadaInput.value || areaCalculadaInput.value === 'Error') {
                 event.preventDefault();
                 alert('Por favor complete la cantidad de plantas y seleccione una densidad para calcular el área.');
+                return;
             }
         });
+        
+        // Inicializar filtros al cargar
+        if (florSelect.value && florSelect.value !== '0') {
+            filtrarColores();
+        }
     });
 </script>
 {% endblock %}

@@ -16,7 +16,18 @@
                     {% if column.template %}
                         {% include column.template with context %}
                     {% else %}
-                        {{ item[column.field] }}
+                        {% set field_value = item[column.field] %}
+                        {% if column.format == 'decimal1' %}
+                            {{ "%.1f"|format(field_value) }}
+                        {% elif column.format == 'decimal2' %}
+                            {{ "%.2f"|format(field_value) }}
+                        {% elif column.format == 'currency' %}
+                            ${{ "%.2f"|format(field_value) }}
+                        {% elif column.format == 'percentage' %}
+                            {{ "%.1f"|format(field_value) }}%
+                        {% else %}
+                            {{ field_value }}
+                        {% endif %}
                     {% endif %}
                 </td>
                 {% endfor %}

@@ -2,13 +2,13 @@
 Módulo unificado para la importación de datasets en la aplicación.
 
 Mejoras:
-- Patrón de diseño Factory para los importadores
+- Importación directa en lugar de dinámica para evitar errores
 - Mejor manejo de errores
 - Documentación más clara
 """
 
 import os
-from typing import Dict, Tuple, Callable
+from typing import Dict, Tuple
 from flask import current_app
 from app.utils.base_importer import BaseImporter
 
@@ -19,14 +19,8 @@ os.makedirs(TEMP_DIR, exist_ok=True)
 class DatasetImporter:
     """
     Clase orquestadora para la importación de datasets.
-    Implementa el patrón Factory para delegar a importadores específicos.
+    Utiliza importación directa para evitar problemas con importación dinámica.
     """
-    
-    # Registro de importadores disponibles
-    _IMPORTERS: Dict[str, Callable] = {
-        'variedades': 'app.utils.variedades_importer.VariedadesImporter.import_variedades',
-        'bloques': 'app.utils.bloques_importer.BloquesImporter.import_bloques_camas'
-    }
     
     @staticmethod
     def save_temp_file(file_obj):
@@ -60,24 +54,32 @@ class DatasetImporter:
             Tuple: (success, message, stats)
         """
         try:
-            # Obtener el importador específico
-            importer_path = DatasetImporter._IMPORTERS.get(dataset_type)
-            if not importer_path:
+            # Importar los módulos directamente
+            if dataset_type == 'variedades':
+                from app.utils.variedades_importer import VariedadesImporter
+                return VariedadesImporter.import_variedades(
+                    file_path=file_path,
+                    column_mapping=column_mapping,
+                    validate_only=validate_only,
+                    skip_first_row=skip_first_row
+                )
+            
+            elif dataset_type == 'bloques':
+                from app.utils.bloques_importer import BloquesImporter
+                return BloquesImporter.import_bloques_camas(
+                    file_path=file_path,
+                    column_mapping=column_mapping,
+                    validate_only=validate_only,
+                    skip_first_row=skip_first_row
+                )
+            
+            else:
                 return False, f"Tipo de dataset no soportado: {dataset_type}", {}
             
-            # Importar dinámicamente el método
-            module_path, method_name = importer_path.rsplit('.', 1)
-            module = __import__(module_path, fromlist=[method_name])
-            importer_method = getattr(module, method_name)
-            
-            # Ejecutar el importador
-            return importer_method(
-                file_path=file_path,
-                column_mapping=column_mapping,
-                validate_only=validate_only,
-                skip_first_row=skip_first_row
-            )
-            
+        except ImportError as e:
+            current_app.logger.error(f"Error al importar módulo para {dataset_type}: {str(e)}", exc_info=True)
+            return False, f"Error al cargar el importador para {dataset_type}: {str(e)}", {}
+        
         except Exception as e:
             current_app.logger.error(f"Error en DatasetImporter: {str(e)}", exc_info=True)
             return False, f"Error inesperado durante la importación: {str(e)}", {}

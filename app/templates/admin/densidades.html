@@ -23,7 +23,7 @@
                         columns=[
                             {'label': 'ID', 'field': 'densidad_id'},
                             {'label': 'Nombre', 'field': 'densidad'},
-                            {'label': 'Valor (plantas/m²)', 'field': 'valor'},
+                            {'label': 'Valor (plantas/m²)', 'field': 'valor', 'format': 'decimal1'},
                             {'label': 'Acciones', 'template': 'components/_densidad_actions.html'}
                         ],
                         items=densidades
@@ -48,6 +48,17 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar DataTable si hay datos
+        if ($('#tablaDensidades').length > 0 && {{ densidades|length }} > 0) {
+            $('#tablaDensidades').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
+                },
+                order: [[2, 'asc']], // Ordenar por valor (tercera columna)
+                pageLength: 10
+            });
+        }
+        
         // Configurar modales de edición y eliminación
         const editarModal = document.getElementById('editarDensidadModal');
         if (editarModal) {
