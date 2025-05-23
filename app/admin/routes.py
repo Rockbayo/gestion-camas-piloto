@@ -384,7 +384,7 @@ def importar_historico():
             
             try:
                 # Usar el importador optimizado
-                from app.utils import HistoricalImporter
+                from app.utils.importar_historico import HistoricalImporter
                 import_results = HistoricalImporter.importar_historico(temp_path)
                 
                 if 'error' in import_results:
