@@ -1,34 +1,34 @@
-{% extends "base.html" %}
+<!-- app/templates/siembras/inicio_corte.html -->
+{% extends "siembras/base_siembra.html" %}
+{% set title = "Registrar Inicio de Corte" %}
+{% set back_url = url_for('siembras.index') %}
 
-{% block content %}
-<div class="container">
-    <h2>Registrar Inicio de Corte</h2>
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Siembra #{{ siembra.siembra_id }}</h3>
+{% block siembra_content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Siembra #{{ siembra.siembra_id }}</h3>
+    </div>
+    <div class="card-body">
+        <div class="mb-4">
+            <p><strong>Bloque:</strong> {{ siembra.bloque_cama.bloque.bloque }}</p>
+            <p><strong>Cama:</strong> {{ siembra.bloque_cama.cama.cama }}</p>
+            <p><strong>Lado:</strong> {{ siembra.bloque_cama.lado.lado }}</p>
+            <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
+            <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat('%d/%m/%Y') }}</p>
         </div>
-        <div class="card-body">
-            <div class="mb-4">
-                <p><strong>Bloque:</strong> {{ siembra.bloque_cama.bloque.bloque }}</p>
-                <p><strong>Cama:</strong> {{ siembra.bloque_cama.cama.cama }}</p>
-                <p><strong>Lado:</strong> {{ siembra.bloque_cama.lado.lado }}</p>
-                <p><strong>Variedad:</strong> {{ siembra.variedad.variedad }}</p>
-                <p><strong>Fecha de Siembra:</strong> {{ siembra.fecha_siembra|dateformat('%d/%m/%Y') }}</p>
+        
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                {{ form.fecha_inicio_corte.label(class="form-label") }}
+                {{ form.fecha_inicio_corte(class="form-control", type="date") }}
             </div>
             
-            <form method="POST" action="">
-                {{ form.hidden_tag() }}
-                <div class="form-group">
-                    {{ form.fecha_inicio_corte.label(class="form-label") }}
-                    {{ form.fecha_inicio_corte(class="form-control", type="date") }}
-                </div>
-                
-                <div class="form-group mt-4">
-                    {{ form.submit(class="btn btn-primary") }}
-                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </form>
-        </div>
+            <div class="form-group mt-4">
+                {{ form.submit(class="btn btn-primary") }}
+                <a href="{{ back_url }}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

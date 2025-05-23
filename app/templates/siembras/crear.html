@@ -1,173 +1,32 @@
 <!-- app/templates/siembras/crear.html -->
-{% extends "base.html" %}
+{% extends "siembras/base_siembra.html" %}
+{% set title = "Nueva Siembra" %}
+{% set back_url = url_for('siembras.index') %}
 
-{% block content %}
-<div class="container">
-    <h1 class="mb-4">Nueva Siembra</h1>
-    
-    <div class="mb-3">
-        <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+{% block siembra_content %}
+<div class="card shadow">
+    <div class="card-header bg-primary text-white">
+        <h5 class="card-title mb-0">Formulario de Registro</h5>
     </div>
-    
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Formulario de Registro</h5>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="" id="siembraForm">
-                {{ form.hidden_tag() }}
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Ubicación</h5>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.bloque_id.label(class="form-label") }}
-                            {{ form.bloque_id(class="form-select") }}
-                            {% for error in form.bloque_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.cama_id.label(class="form-label") }}
-                            {{ form.cama_id(class="form-select") }}
-                            {% for error in form.cama_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.lado_id.label(class="form-label") }}
-                            {{ form.lado_id(class="form-select") }}
-                            {% for error in form.lado_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Variedad</h5>
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Seleccione primero el tipo de flor, luego el color para filtrar las variedades disponibles.
-                        </div>
-                    </div>
-                    <!-- Filtros de Flor y Color -->
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.flor_id.label(class="form-label") }}
-                            {{ form.flor_id(class="form-select", id="flor_id") }}
-                            {% for error in form.flor_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.color_id.label(class="form-label") }}
-                            {{ form.color_id(class="form-select", id="color_id") }}
-                            {% for error in form.color_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                            <div class="form-text">
-                                <span id="color-loading" class="text-muted" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin"></i> Cargando colores...
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.variedad_id.label(class="form-label") }}
-                            {{ form.variedad_id(class="form-select", id="variedad_id") }}
-                            {% for error in form.variedad_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                            <div class="form-text">
-                                <span id="variedad-loading" class="text-muted" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin"></i> Cargando variedades...
-                                </span>
-                                <span id="variedad-info" class="text-success" style="display: none;">
-                                    <i class="fas fa-check-circle"></i> <span id="variedad-count">0</span> variedades disponibles
-                                </span>
-                                <div id="variedad-seleccionada" class="text-info mt-1" style="display: none;">
-                                    <small><i class="fas fa-info-circle"></i> <strong>Tipo:</strong> <span id="variedad-detalle"></span></small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Información de Siembra</h5>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.fecha_siembra.label(class="form-label") }}
-                            {{ form.fecha_siembra(class="form-control", type="date") }}
-                            {% for error in form.fecha_siembra.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.cantidad_plantas.label(class="form-label") }}
-                            {{ form.cantidad_plantas(class="form-control", id="cantidad_plantas") }}
-                            {% for error in form.cantidad_plantas.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.densidad_id.label(class="form-label") }}
-                            {{ form.densidad_id(class="form-select", id="densidad_id") }}
-                            {% for error in form.densidad_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label class="form-label">Área Calculada</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="area_calculada" readonly>
-                                <span class="input-group-text">m²</span>
-                            </div>
-                            <small class="form-text text-muted">
-                                Área calculada automáticamente según cantidad de plantas y densidad.
-                                <span id="area-loading" class="text-muted" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin"></i> Calculando...
-                                </span>
-                            </small>
-                            {{ form.area_id(id="area_id") }}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary me-md-2">Cancelar</a>
-                    {{ form.submit(class="btn btn-primary") }}
-                </div>
-            </form>
-        </div>
+    <div class="card-body">
+        <form method="POST" action="" id="siembraForm">
+            {{ form.hidden_tag() }}
+            
+            {% include "components/_form_ubicacion.html" %}
+            {% include "components/_form_variedad.html" with context %}
+            {% include "components/_form_siembra.html" with context %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ back_url }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const florSelect = document.getElementById('flor_id');
@@ -199,7 +58,6 @@
             const florId = florSelect.value;
             
             if (!florId || florId === '0') {
-                // Si no hay flor seleccionada, mostrar todos los colores
                 return;
             }
             
@@ -211,10 +69,7 @@
                     showLoading(colorLoading, false);
                     
                     if (data.success) {
-                        // Limpiar opciones actuales
                         colorSelect.innerHTML = '<option value="0">Todos los colores</option>';
-                        
-                        // Agregar nuevas opciones
                         data.colores.forEach(color => {
                             const option = document.createElement('option');
                             option.value = color.id;
@@ -222,7 +77,6 @@
                             colorSelect.appendChild(option);
                         });
                         
-                        // Limpiar variedades cuando cambie la flor
                         variedadSelect.innerHTML = '<option value="0">-- Seleccione una variedad --</option>';
                         filtrarVariedades();
                     } else {
@@ -251,21 +105,17 @@
                     showLoading(variedadLoading, false);
                     
                     if (data.success) {
-                        // Limpiar opciones actuales
                         variedadSelect.innerHTML = '<option value="0">-- Seleccione una variedad --</option>';
                         
-                        // Agregar nuevas opciones
                         data.variedades.forEach(variedad => {
                             const option = document.createElement('option');
                             option.value = variedad.id;
                             option.textContent = variedad.nombre_completo;
-                            // Agregar información adicional como data attributes para referencia
                             option.setAttribute('data-flor', variedad.flor);
                             option.setAttribute('data-color', variedad.color);
                             variedadSelect.appendChild(option);
                         });
                         
-                        // Mostrar información de variedades disponibles
                         variedadCount.textContent = data.variedades.length;
                         showLoading(variedadInfo, true);
                     } else {
@@ -285,7 +135,6 @@
             const cantidadPlantas = cantidadPlantasInput.value;
             const densidadId = densidadSelect.value;
             
-            // Reset values
             areaCalculadaInput.value = '';
             areaIdInput.value = '';
             
@@ -341,7 +190,6 @@
         // Validación del formulario
         const siembraForm = document.getElementById('siembraForm');
         siembraForm.addEventListener('submit', function(event) {
-            // Verificar que se haya seleccionado una variedad válida
             if (!variedadSelect.value || variedadSelect.value === '0') {
                 event.preventDefault();
                 alert('Por favor seleccione una variedad válida.');
@@ -349,7 +197,6 @@
                 return;
             }
             
-            // Verificar que se haya calculado un área
             if (!areaCalculadaInput.value || areaCalculadaInput.value === 'Error') {
                 event.preventDefault();
                 alert('Por favor complete la cantidad de plantas y seleccione una densidad para calcular el área.');

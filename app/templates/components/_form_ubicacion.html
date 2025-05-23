@@ -1,0 +1,33 @@
+<!-- app/templates/siembras/components/_form_ubicacion.html -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h5 class="border-bottom pb-2">Ubicación</h5>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.bloque_id.label(class="form-label") }}
+            {{ form.bloque_id(class="form-select") }}
+            {% for error in form.bloque_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.cama_id.label(class="form-label") }}
+            {{ form.cama_id(class="form-select") }}
+            {% for error in form.cama_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.lado_id.label(class="form-label") }}
+            {{ form.lado_id(class="form-select") }}
+            {% for error in form.lado_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,57 @@
+<!-- app/templates/siembras/components/_form_siembra.html -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h5 class="border-bottom pb-2">Información de Siembra</h5>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.fecha_siembra.label(class="form-label") }}
+            {{ form.fecha_siembra(class="form-control", type="date") }}
+            {% for error in form.fecha_siembra.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.densidad_id.label(class="form-label") }}
+            {{ form.densidad_id(class="form-select", id="densidad_id") }}
+            {% for error in form.densidad_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.cantidad_plantas.label(class="form-label") }}
+            {{ form.cantidad_plantas(class="form-control", id="cantidad_plantas", readonly=readonly_cantidad) }}
+            {% if readonly_cantidad %}
+            <small class="form-text text-muted">Este campo no se puede editar directamente.</small>
+            {% endif %}
+            {% for error in form.cantidad_plantas.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if show_area_calculada %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="form-group">
+            <label class="form-label">Área Calculada</label>
+            <div class="input-group">
+                <input type="text" class="form-control" id="area_calculada" readonly>
+                <span class="input-group-text">m²</span>
+            </div>
+            <small class="form-text text-muted">
+                Área calculada automáticamente según cantidad de plantas y densidad.
+                <span id="area-loading" class="text-muted" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Calculando...
+                </span>
+            </small>
+            {{ form.area_id(id="area_id") }}
+        </div>
+    </div>
+</div>
+{% endif %}

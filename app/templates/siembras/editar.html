@@ -1,122 +1,38 @@
 <!-- app/templates/siembras/editar.html -->
-{% extends "base.html" %}
+{% extends "siembras/base_siembra.html" %}
+{% set title = "Editar Siembra" %}
+{% set back_url = url_for('siembras.detalles', id=siembra.siembra_id) %}
 
-{% block content %}
-<div class="container">
-    <h1 class="mb-4">Editar Siembra</h1>
-    
-    <div class="mb-3">
-        <a href="{{ url_for('siembras.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Volver
-        </a>
+{% block siembra_content %}
+<div class="card shadow">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">Formulario de Edición - Siembra #{{ siembra.siembra_id }}</h5>
     </div>
-    
-    <div class="card shadow">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="card-title mb-0">Formulario de Edición - Siembra #{{ siembra.siembra_id }}</h5>
-        </div>
-        <div class="card-body">
-            <form method="POST" action="{{ url_for('siembras.editar', id=siembra.siembra_id) }}">
-                {{ form.hidden_tag() }}
-                {{ form.area_id }}
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Ubicación</h5>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.bloque_id.label(class="form-label") }}
-                            {{ form.bloque_id(class="form-select") }}
-                            {% for error in form.bloque_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.cama_id.label(class="form-label") }}
-                            {{ form.cama_id(class="form-select") }}
-                            {% for error in form.cama_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.lado_id.label(class="form-label") }}
-                            {{ form.lado_id(class="form-select") }}
-                            {% for error in form.lado_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Variedad</h5>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            {{ form.variedad_id.label(class="form-label") }}
-                            {{ form.variedad_id(class="form-select") }}
-                            {% for error in form.variedad_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-12">
-                        <h5 class="border-bottom pb-2">Información de Siembra</h5>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.fecha_siembra.label(class="form-label") }}
-                            {{ form.fecha_siembra(class="form-control", type="date") }}
-                            {% for error in form.fecha_siembra.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.densidad_id.label(class="form-label") }}
-                            {{ form.densidad_id(class="form-select") }}
-                            {% for error in form.densidad_id.errors %}
-                            <span class="text-danger">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            {{ form.cantidad_plantas.label(class="form-label") }}
-                            {{ form.cantidad_plantas(class="form-control", readonly=True) }}
-                            <small class="form-text text-muted">Este campo no se puede editar directamente.</small>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('siembras.detalles', id=siembra.siembra_id) }}" class="btn btn-secondary me-md-2">Cancelar</a>
-                    {{ form.submit(class="btn btn-primary", value="Actualizar Siembra") }}
-                </div>
-            </form>
-        </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('siembras.editar', id=siembra.siembra_id) }}">
+            {{ form.hidden_tag() }}
+            {{ form.area_id }}
+            
+            {% include "components/_form_ubicacion.html" %}
+            {% include "components/_form_variedad.html" with context %}
+            {% include "templates/components/_form_siembra.html" with context %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{{ back_url }}" class="btn btn-secondary me-md-2">Cancelar</a>
+                {{ form.submit(class="btn btn-primary", value="Actualizar Siembra") }}
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
-    // Para prevenir problemas con los campos de cálculo que no se usan en edición
     document.addEventListener('DOMContentLoaded', function() {
         const cantidadPlantasInput = document.getElementById('cantidad_plantas');
         if (cantidadPlantasInput) {
             cantidadPlantasInput.addEventListener('change', function() {
-                // Mantener el valor original si el usuario intenta cambiarlo
                 if (this.defaultValue) {
                     this.value = this.defaultValue;
                 }

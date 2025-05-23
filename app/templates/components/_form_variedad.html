@@ -1,0 +1,61 @@
+<!-- app/templates/siembras/components/_form_variedad.html -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h5 class="border-bottom pb-2">Variedad</h5>
+        {% if show_variedad_filter %}
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Seleccione primero el tipo de flor, luego el color para filtrar las variedades disponibles.
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if show_variedad_filter %}
+    <!-- Filtros de Flor y Color -->
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.flor_id.label(class="form-label") }}
+            {{ form.flor_id(class="form-select", id="flor_id") }}
+            {% for error in form.flor_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            {{ form.color_id.label(class="form-label") }}
+            {{ form.color_id(class="form-select", id="color_id") }}
+            {% for error in form.color_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+            <div class="form-text">
+                <span id="color-loading" class="text-muted" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando colores...
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="col-md-{% if show_variedad_filter %}4{% else %}12{% endif %}">
+        <div class="form-group">
+            {{ form.variedad_id.label(class="form-label") }}
+            {{ form.variedad_id(class="form-select", id="variedad_id") }}
+            {% for error in form.variedad_id.errors %}
+            <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+            {% if show_variedad_filter %}
+            <div class="form-text">
+                <span id="variedad-loading" class="text-muted" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando variedades...
+                </span>
+                <span id="variedad-info" class="text-success" style="display: none;">
+                    <i class="fas fa-check-circle"></i> <span id="variedad-count">0</span> variedades disponibles
+                </span>
+                <div id="variedad-seleccionada" class="text-info mt-1" style="display: none;">
+                    <small><i class="fas fa-info-circle"></i> <strong>Tipo:</strong> <span id="variedad-detalle"></span></small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

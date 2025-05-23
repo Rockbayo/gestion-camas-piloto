@@ -2,6 +2,7 @@ from sqlalchemy import func, extract, and_, desc
 from datetime import datetime, timedelta
 from app import db
 from app.models import Siembra, Corte, Variedad, Area, Densidad, Flor, Color, Bloque, BloqueCamaLado, FlorColor
+from app.utils.data_utils import safe_int, safe_float
 
 def get_filtered_data(filters):
     """Obtiene datos filtrados según los parámetros"""
