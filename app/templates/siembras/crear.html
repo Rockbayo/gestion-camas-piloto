@@ -139,7 +139,7 @@
                 </div>
                 
                 <div class="row mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="form-group">
                             <label class="form-label">Área Calculada</label>
                             <div class="input-group">
@@ -152,12 +152,6 @@
                                     <i class="fas fa-spinner fa-spin"></i> Calculando...
                                 </span>
                             </small>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">Área Asignada</label>
-                            <input type="text" class="form-control" id="area_asignada" readonly>
                             {{ form.area_id(id="area_id") }}
                         </div>
                     </div>
@@ -182,7 +176,6 @@
         const cantidadPlantasInput = document.getElementById('cantidad_plantas');
         const densidadSelect = document.getElementById('densidad_id');
         const areaCalculadaInput = document.getElementById('area_calculada');
-        const areaAsignadaInput = document.getElementById('area_asignada');
         const areaIdInput = document.getElementById('area_id');
         
         // Elementos de carga
@@ -190,6 +183,8 @@
         const variedadLoading = document.getElementById('variedad-loading');
         const variedadInfo = document.getElementById('variedad-info');
         const variedadCount = document.getElementById('variedad-count');
+        const variedadSeleccionada = document.getElementById('variedad-seleccionada');
+        const variedadDetalle = document.getElementById('variedad-detalle');
         const areaLoading = document.getElementById('area-loading');
         
         // Función para mostrar/ocultar elementos de carga
@@ -293,7 +288,6 @@
             // Reset values
             areaCalculadaInput.value = '';
             areaIdInput.value = '';
-            areaAsignadaInput.value = '';
             
             if (cantidadPlantas && densidadId) {
                 showLoading(areaLoading, true);
@@ -304,9 +298,8 @@
                         showLoading(areaLoading, false);
                         
                         if (data.success) {
-                            areaCalculadaInput.value = data.area_calculada;
+                            areaCalculadaInput.value = `${data.area_calculada} m²`;
                             areaIdInput.value = data.area_id || '';
-                            areaAsignadaInput.value = data.area_nombre || `ÁREA ${data.area_calculada}m²`;
                         } else {
                             console.error('Error en cálculo:', data.error);
                             areaCalculadaInput.value = 'Error';
@@ -327,6 +320,23 @@
         colorSelect.addEventListener('change', filtrarVariedades);
         cantidadPlantasInput.addEventListener('input', calcularArea);
         densidadSelect.addEventListener('change', calcularArea);
+        
+        // Event listener para mostrar información de la variedad seleccionada
+        variedadSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value && selectedOption.value !== '0') {
+                const flor = selectedOption.getAttribute('data-flor');
+                const color = selectedOption.getAttribute('data-color');
+                if (flor && color) {
+                    variedadDetalle.textContent = `${flor} ${color}`;
+                    showLoading(variedadSeleccionada, true);
+                } else {
+                    showLoading(variedadSeleccionada, false);
+                }
+            } else {
+                showLoading(variedadSeleccionada, false);
+            }
+        });
         
         // Validación del formulario
         const siembraForm = document.getElementById('siembraForm');

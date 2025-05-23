@@ -57,9 +57,9 @@ class BaseSiembraForm(FlaskForm):
             for v in variedades
         ]
         
-        # Densidades: ordenamiento por valor numérico
+        # Densidades: ordenamiento por valor numérico con formato de 1 decimal  
         densidades = Densidad.query.order_by(Densidad.valor).all()
-        self.densidad_id.choices = [(d.densidad_id, f"{d.densidad} ({d.valor} plantas/m²)") for d in densidades]
+        self.densidad_id.choices = [(d.densidad_id, f"{d.densidad} ({d.valor:.1f} plantas/m²)") for d in densidades]
     
     def validate_fecha_siembra(self, field):
         if field.data > datetime.now().date():
@@ -116,7 +116,7 @@ class EditarSiembraForm(FlaskForm):
         ]
         
         densidades = Densidad.query.order_by(Densidad.valor).all()
-        self.densidad_id.choices = [(d.densidad_id, d.descripcion_completa) for d in densidades]
+        self.densidad_id.choices = [(d.densidad_id, f"{d.densidad} ({d.valor:.1f} plantas/m²)") for d in densidades]
     
     def validate_fecha_siembra(self, field):
         if field.data > datetime.now().date():
