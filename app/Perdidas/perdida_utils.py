@@ -39,9 +39,11 @@ def calculate_available_plants(siembra, exclude_loss_id=None, full_stats=False):
             'perdidas_por_causa': []
         }
     
-    total_plantas = siembra.area.area * siembra.densidad.valor
-    total_tallos = db.session.query(func.sum(Corte.cantidad_tallos))\
-                    .filter(Corte.siembra_id == siembra.siembra_id).scalar() or 0
+    total_plantas = int(siembra.area.area * siembra.densidad.valor)
+    
+    # Corregir: usar int() para evitar problemas de tipos
+    total_tallos = int(db.session.query(func.sum(Corte.cantidad_tallos))\
+                    .filter(Corte.siembra_id == siembra.siembra_id).scalar() or 0)
     
     query = db.session.query(func.sum(Perdida.cantidad))\
            .filter(Perdida.siembra_id == siembra.siembra_id)
@@ -49,7 +51,7 @@ def calculate_available_plants(siembra, exclude_loss_id=None, full_stats=False):
     if exclude_loss_id:
         query = query.filter(Perdida.perdida_id != exclude_loss_id)
     
-    total_perdidas = query.scalar() or 0
+    total_perdidas = int(query.scalar() or 0)
     disponible = max(0, total_plantas - total_tallos - total_perdidas)
     
     if not full_stats:

@@ -15,6 +15,20 @@ import os
 import json
 import uuid
 
+from functools import wraps
+
+def require_permission(permission):
+    """Decorador para verificar permisos"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.has_permission(permission):
+                flash('No tienes permiso para realizar esta acción', 'danger')
+                return redirect(url_for('main.index'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 # Configuración
 TEMP_DIR = os.path.join('uploads', 'temp')
 os.makedirs(TEMP_DIR, exist_ok=True)
@@ -70,6 +84,7 @@ def datasets():
 
 @bp.route('/datasets/preview/<dataset_type>', methods=['GET', 'POST'])
 @login_required
+@require_permission('importar_datos')
 def preview_dataset(dataset_type):
     """Previsualización de datasets"""
     if not _check_permission():

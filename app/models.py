@@ -428,14 +428,16 @@ class Siembra(BaseModel):
     def dias_ciclo(self) -> int:
         """
         Días desde siembra hasta fin de corte o último corte.
-        Máximo 100 días (3 meses aproximadamente).
         """
-        fecha_fin = self.fecha_fin_corte or max(
-            (corte.fecha_corte for corte in self.cortes),
-            default=datetime.utcnow().date()
-        )
+        if self.fecha_fin_corte:
+            fecha_fin = self.fecha_fin_corte
+        elif self.cortes:
+            fecha_fin = max(corte.fecha_corte for corte in self.cortes)
+        else:
+            fecha_fin = datetime.now().date()
+        
         dias = (fecha_fin - self.fecha_siembra).days
-        return min(dias, 100)
+        return max(0, dias)  # Sin límite arbitrario, pero no negativo
     
     @hybrid_property
     def total_plantas(self) -> int:
